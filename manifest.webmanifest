@@ -1,0 +1,16 @@
+{
+  "name": "K' Space",
+  "short_name": "K' Space",
+  "description": "Tinker Bell 主题的私人饮食运动记录工作台",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eaf6e9",
+  "theme_color": "#eaf6e9",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
