@@ -2122,7 +2122,29 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
+if('serviceWorker' in navigator){
+  let reloadPending=false;
+  navigator.serviceWorker.addEventListener('message',e=>{
+    if(e.data && e.data.type==='reload' && !reloadPending){
+      reloadPending=true;
+      window.location.reload();
+    }
+  });
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.addEventListener('updatefound',()=>{
+        const w=reg.installing;
+        if(!w)return;
+        w.addEventListener('statechange',()=>{
+          if(w.state==='activated' && !reloadPending){
+            reloadPending=true;
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(()=>{});
+  });
+}
 
 /* ============ 启动 ============ */
 seed();migrate();initNav();renderBrand();
