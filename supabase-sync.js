@@ -75,7 +75,7 @@ const Cloud=(function(){
     const r=await fetch(rest('settings'),{method:'POST',headers:headers({'Prefer':'resolution=merge-duplicates'}),body:JSON.stringify({user_id:u.id,data:obj,updated_at:new Date().toISOString()})});
     if(!r.ok)throw new Error('设置同步失败: '+(await r.text()).slice(0,80));
   }
-  function bg(fn){ fn().catch(e=>{ console.warn('[cloud]',e); if(typeof toast==='function')toast('云端同步失败：'+(e.message||'').slice(0,50)); }); }
+  function bg(fn){ fn().catch(e=>{ console.warn('[cloud]',e); if(typeof toast==='function'){const t=document.getElementById('toast'); if(t){const msg=(e&&e.message)?e.message:String(e); t.textContent='云端同步失败：'+msg.slice(0,120); t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3000);} } }); }
 
   /* ---------- 拉取（登录后覆盖本地） ---------- */
   async function pull(){

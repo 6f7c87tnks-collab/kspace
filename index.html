@@ -977,9 +977,11 @@ let pendingAvatar=null;
 function renderBrand(){
   const s=DB.obj('settings');
   const av=document.getElementById('brandAvatar');
-  if(s.avatar){av.innerHTML=`<img src="${s.avatar}" style="width:100%;height:100%;object-fit:cover;">`;}
-  else{av.innerHTML=`<svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="18" fill="#e3f1d9"/><path d="M20 6 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3z" fill="#f0cf5a" stroke="#e0b73f" stroke-width="1"/><circle cx="20" cy="20" r="3.2" fill="#6fae4e"/></svg>`;}
-  document.getElementById('brandName').textContent=s.brandName||"K' Space";
+  if(av){
+    if(s.avatar){av.innerHTML=`<img src="${s.avatar}" style="width:100%;height:100%;object-fit:cover;">`;}
+    else{av.innerHTML=`<svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="18" fill="#e3f1d9"/><path d="M20 6 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3z" fill="#f0cf5a" stroke="#e0b73f" stroke-width="1"/><circle cx="20" cy="20" r="3.2" fill="#6fae4e"/></svg>`;}
+  }
+  const bn=document.getElementById('brandName'); if(bn)bn.textContent=s.brandName||"K' Space";
   document.title=s.brandName||"K' Space";
 }
 function openBrandModal(){const s=DB.obj('settings');pendingAvatar=s.avatar||null;document.getElementById('brandNameInput').value=s.brandName||"";renderAvatarPrev();document.getElementById('brandModal').classList.add('open');}
@@ -988,7 +990,7 @@ function renderAvatarPrev(){const el=document.getElementById('brandAvatarPrev');
 function onAvatarFile(e){const f=e.target.files[0];if(!f)return;compressImg(f,200,data=>{pendingAvatar=data;renderAvatarPrev();});e.target.value='';}
 function resetAvatar(){pendingAvatar=null;renderAvatarPrev();}
 function saveBrand(){const s=DB.obj('settings');s.avatar=pendingAvatar;s.brandName=document.getElementById('brandNameInput').value.trim()||"K' Space";DB.saveObj('settings',s);closeBrandModal();renderBrand();toast('已保存');}
-document.getElementById('brandAvatar').onclick=openBrandModal;
+(function(){const el=document.getElementById('brandAvatar'); if(el)el.onclick=openBrandModal;})();
 function dayKcal(date){return DB.load('food').filter(x=>x.date===date).reduce((s,x)=>s+(x.items||[]).reduce((a,b)=>a+b.kcal,0),0);}
 function dayWater(date){return DB.load('food').filter(x=>x.date===date).reduce((s,x)=>s+(x.water||0),0);}
 function dayMacros(date){let p=0,c=0,f=0;DB.load('food').filter(x=>x.date===date).forEach(x=>(x.items||[]).forEach(i=>{p+=i.p;c+=i.c;f+=i.f;}));return{p:+p.toFixed(1),c:+c.toFixed(1),f:+f.toFixed(1)};}
@@ -1090,7 +1092,7 @@ function quickMed(){
   DB.add('med',{date:ds,drug:m.drug||'替尔泊肽',dose:m.dose||5,note:m.note||'',createdAt:nowISO()});
   renderMed();renderToday();toast('已记录 '+ds+' 注射');
 }
-document.getElementById('todoInput').addEventListener('keydown',e=>{if(e.key==='Enter')addTodo();});
+(function(){const el=document.getElementById('todoInput'); if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter')addTodo();});})();
 
 /* 语音 */
 let recog=null;
@@ -1870,7 +1872,7 @@ async function afterLogin(){
 async function cloudSyncNow(){
   toast('正在同步…');
   try{ await Cloud.pull(); renderToday();renderView(currentView()); toast('已同步'); }
-  catch(e){ toast('同步失败：'+e.message.slice(0,40)); }
+  catch(e){ console.error('[sync]',e); const msg=(e&&e.message)?e.message:String(e); toast('同步失败：'+msg.slice(0,120)); }
 }
 async function cloudSignOut(){ await Cloud.signOut(); renderCloud(); toast('已退出登录'); }
 function saveSettings(){
@@ -1991,8 +1993,8 @@ function drawTrend(canvas,recs,combined){
 /* ============ 导航 ============ */
 let currentView='today';
 function go(v){currentView=v;const sec=document.getElementById('view-'+v);if(!sec)return;document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));sec.classList.add('active');document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));const pt=document.getElementById('pageTitle');if(pt)pt.textContent=TITLES[v]||v;if(window.innerWidth<900)document.body.classList.remove('nav-open');window.scrollTo(0,0);renderView(v);}
-document.getElementById('navToggle').onclick=()=>document.body.classList.toggle('nav-open');
-document.getElementById('mask').onclick=()=>document.body.classList.remove('nav-open');
+(function(){const nt=document.getElementById('navToggle'); if(nt)nt.onclick=()=>document.body.classList.toggle('nav-open');})();
+(function(){const mk=document.getElementById('mask'); if(mk)mk.onclick=()=>document.body.classList.remove('nav-open');})();
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>go(b.dataset.view));
 function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-open');else document.body.classList.add('nav-open');}
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
