@@ -2176,7 +2176,11 @@ function exportCSV(){
 }
 function importJSON(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);ask('导入将覆盖现有数据，确定继续？',()=>{if(d.settings)DB.saveObj('settings',d.settings);['weight','food','exercise','period','todo','journal','supp','med','steps'].forEach(t=>{if(d[t])DB.save(t,d[t]);});toast('已导入');renderToday();renderView(currentView());});}catch(err){toast('JSON 解析失败：'+err.message);}};r.readAsText(f);e.target.value='';}
 function clearAllData(){ask('确定清空所有数据？此操作不可恢复。',()=>{['weight','food','exercise','period','todo','journal','supp','med','steps','settings'].forEach(t=>localStorage.removeItem(DB.K[t]));seed();migrate();renderToday();renderView(currentView());toast('已清空');});}
+let _lastHardReset=0;
 function hardResetCache(skipAsk){
+  const now=Date.now();
+  if(now-_lastHardReset<10000){return;} // 10 秒内不重复触发，避免死循环
+  _lastHardReset=now;
   const doReset=()=>{
     if('serviceWorker' in navigator){
       navigator.serviceWorker.getRegistrations().then(regs=>Promise.all(regs.map(r=>r.unregister())))
@@ -2245,28 +2249,19 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v22';
+const KSPACE_VERSION='kspace-v24';
 if('serviceWorker' in navigator){
   let reloadPending=false;
+  let _lastReload=0;
   navigator.serviceWorker.addEventListener('message',e=>{
     if(e.data && e.data.type==='reload' && !reloadPending){
+      const now=Date.now();
+      if(now-_lastReload<3000)return; // 3 秒内不重复刷新
+      _lastReload=now;
       reloadPending=true;
       window.location.reload();
     }
   });
-  // 启动时强制检测旧缓存，如果是旧版 SW 则自动清理刷新
-  (function checkSwVersion(){
-    if(!navigator.serviceWorker.controller)return;
-    const ch=new MessageChannel();let done=false;
-    const t=setTimeout(()=>{if(!done){done=true;hardResetCache(true);}},1800);
-    ch.port1.onmessage=e=>{
-      if(done)return;done=true;clearTimeout(t);
-      const cache=e.data && e.data.cache;
-      if(cache && cache!==KSPACE_VERSION){hardResetCache(true);}
-    };
-    try{navigator.serviceWorker.controller.postMessage({type:'getCache'},[ch.port2]);}
-    catch(err){if(!done){done=true;clearTimeout(t);hardResetCache(true);}}
-  })();
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('sw.js').then(reg=>{
       reg.addEventListener('updatefound',()=>{
@@ -2274,6 +2269,9 @@ if('serviceWorker' in navigator){
         if(!w)return;
         w.addEventListener('statechange',()=>{
           if(w.state==='activated' && !reloadPending){
+            const now=Date.now();
+            if(now-_lastReload<3000)return; // 防止 SW 反复发消息导致连环刷新
+            _lastReload=now;
             reloadPending=true;
             window.location.reload();
           }
