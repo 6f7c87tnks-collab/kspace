@@ -144,6 +144,8 @@
   /* chart canvas */
   canvas{display:block;width:100%;}
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--soft);margin-bottom:8px;}
+  .bust-group{background:var(--bg2);border-radius:12px;padding:12px;}
+  .bust-gtitle{font-size:13px;font-weight:600;color:var(--main);margin-bottom:8px;}
   .legend span{display:inline-flex;align-items:center;gap:6px;}
   .sw{width:18px;height:0;border-top:3px solid;display:inline-block;}
   /* modal */
@@ -251,6 +253,7 @@
     <button class="nav-item active" data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6H10v6H6a2 2 0 0 1-2-2z"/></svg>今日速览</button>
     <button class="nav-item" data-view="weight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6v9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V9a6 6 0 0 0-6-6z"/><path d="M9 9h6"/></svg>体重记录</button>
     <button class="nav-item" data-view="girth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v10H3z"/><path d="M7 7v3M11 7v5M15 7v3M19 7v5"/></svg>围度记录</button>
+    <button class="nav-item" data-view="bust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21c4.5-3 7-6.5 7-10a7 7 0 0 0-14 0c0 3.5 2.5 7 7 10z"/><path d="M12 11v4"/><circle cx="12" cy="8" r="1.5"/></svg>胸围卡</button>
     <button class="nav-item" data-view="food"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4"/></svg>饮食记录</button>
     <button class="nav-item" data-view="exercise"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4v16M18 4v16M2 9h4M2 15h4M18 9h4M18 15h4M6 12h12"/></svg>运动记录</button>
     <button class="nav-item" data-view="period"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>经期记录</button>
@@ -490,6 +493,54 @@
       </div>
     </section>
 
+    <!-- 胸围卡 -->
+    <section class="view" id="view-bust">
+      <div class="card">
+        <h3>记录胸围</h3>
+        <div class="row">
+          <div style="flex:1;min-width:130px;"><label>日期</label><input type="date" id="bustDate"></div>
+        </div>
+        <p class="sub" style="margin-top:10px;">参照奶糖派尺码助手：下胸围 2 项、上胸围 3 项、左右胸横围 2 项。</p>
+        <div class="bust-group" style="margin-top:10px;">
+          <div class="bust-gtitle">下胸围</div>
+          <div class="grid2">
+            <div><label>直立正常呼吸 (cm)</label><input type="number" id="bUnder1" step="0.1" inputmode="decimal" placeholder="如 75.0"></div>
+            <div><label>直立吐气 (cm)</label><input type="number" id="bUnder2" step="0.1" inputmode="decimal" placeholder="如 73.5"></div>
+          </div>
+        </div>
+        <div class="bust-group" style="margin-top:10px;">
+          <div class="bust-gtitle">上胸围</div>
+          <div class="grid2">
+            <div><label>完全直立 (cm)</label><input type="number" id="bOver1" step="0.1" inputmode="decimal" placeholder="如 90.0"></div>
+            <div><label>俯身 45° (cm)</label><input type="number" id="bOver2" step="0.1" inputmode="decimal" placeholder="如 91.5"></div>
+            <div><label>俯身 90° (cm)</label><input type="number" id="bOver3" step="0.1" inputmode="decimal" placeholder="如 92.0"></div>
+            <div></div>
+          </div>
+        </div>
+        <div class="bust-group" style="margin-top:10px;">
+          <div class="bust-gtitle">胸横围</div>
+          <div class="grid2">
+            <div><label>左胸横围 (cm)</label><input type="number" id="bLeft" step="0.1" inputmode="decimal" placeholder="如 24.0"></div>
+            <div><label>右胸横围 (cm)</label><input type="number" id="bRight" step="0.1" inputmode="decimal" placeholder="如 24.5"></div>
+          </div>
+        </div>
+        <label>备注</label><input type="text" id="bNote" placeholder="可选，如 晨起空腹测量">
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn sm" onclick="saveBust()">保存记录</button>
+          <button class="btn ghost sm" id="bClearSeed" style="display:none;" onclick="clearBustSeed()">清空示例</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>胸围趋势</h3>
+        <div class="legend" id="bLegend"></div>
+        <div class="chart-box" style="height:240px;"><canvas id="bustChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>历史记录</h3>
+        <div id="bustList"></div>
+      </div>
+    </section>
+
     <!-- 本周复盘 -->
     <section class="view" id="view-weekly">
       <div class="card deep">
@@ -712,7 +763,7 @@
 "use strict";
 /* ============ 存储层（本地优先 + 云端镜像） ============ */
 const DB={
-  K:{weight:'kspace_weight',food:'kspace_food',exercise:'kspace_exercise',period:'kspace_period',todo:'kspace_todo',journal:'kspace_journal',settings:'kspace_settings',supp:'kspace_supp',med:'kspace_med',steps:'kspace_steps',girth:'kspace_girth'},
+  K:{weight:'kspace_weight',food:'kspace_food',exercise:'kspace_exercise',period:'kspace_period',todo:'kspace_todo',journal:'kspace_journal',settings:'kspace_settings',supp:'kspace_supp',med:'kspace_med',steps:'kspace_steps',girth:'kspace_girth',bust:'kspace_bust'},
   load(t){try{return JSON.parse(localStorage.getItem(this.K[t])||'[]')}catch(e){return[]}},
   obj(t){try{return JSON.parse(localStorage.getItem(this.K[t])||'{}')}catch(e){return{}}},
   save(t,a){localStorage.setItem(this.K[t],JSON.stringify(a)); if(Cloud.on()){ if(t==='settings')Cloud.bg(()=>Cloud.pushSettings(a)); else Cloud.bg(()=>Cloud.pushSave(t,a)); }},
@@ -816,6 +867,15 @@ function seed(){
     sample.forEach(r=>{r.createdAt=nowISO();DB.add('girth',r);});
     try{localStorage.setItem('kspace_girth_seeded','1');}catch(e){}
   }
+  if(DB.load('bust').length===0){
+    const sample=[
+      {date:offset(-28),under1:76.0,under2:74.5,over1:91.0,over2:92.0,over3:92.5,left:24.5,right:25.0,note:'初始测量'},
+      {date:offset(-14),under1:75.5,under2:74.0,over1:90.5,over2:91.5,over3:92.0,left:24.2,right:24.8,note:''},
+      {date:offset(0),under1:75.0,under2:73.5,over1:90.0,over2:91.0,over3:91.5,left:24.0,right:24.5,note:''}
+    ];
+    sample.forEach(r=>{r.createdAt=nowISO();DB.add('bust',r);});
+    try{localStorage.setItem('kspace_bust_seeded','1');}catch(e){}
+  }
   const s=DB.obj('settings');
   if(!s.kcal){Object.assign(s,DEFAULTS);DB.saveObj('settings',s);}
 }
@@ -889,7 +949,7 @@ async function aiAnalyze(type,text,photos){
 }
 
 /* ============ 路由 ============ */
-const TITLES={today:'今日速览',weight:'体重记录',girth:'围度记录',food:'饮食记录',exercise:'运动记录',period:'经期记录',weekly:'本周复盘',settings:'设置与备份'};
+const TITLES={today:'今日速览',weight:'体重记录',girth:'围度记录',bust:'胸围卡',food:'饮食记录',exercise:'运动记录',period:'经期记录',weekly:'本周复盘',settings:'设置与备份'};
 function go(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
@@ -906,6 +966,7 @@ function renderView(v){
   if(v==='exercise')renderExercise();
   if(v==='period')renderPeriod();
   if(v==='girth')renderGirth();
+  if(v==='bust')renderBust();
   if(v==='weekly')renderWeekly();
   if(v==='settings')renderSettings();
 }
@@ -1120,6 +1181,58 @@ const GIRTH_PARTS=[
   {key:'calf',label:'小腿',color:'#a98ad6'}
 ];
 function gId(p){return 'g'+p.charAt(0).toUpperCase()+p.slice(1);}
+
+/* 胸围卡：下胸围 2 项 + 上胸围 3 项 + 左右胸横围 2 项 */
+const BUST_PARTS=[
+  {key:'underAvg',label:'下胸围均值',color:'#6fae4e',raw:false},
+  {key:'overAvg',label:'上胸围均值',color:'#e08a7a',raw:false},
+  {key:'bLeft',label:'左胸横围',color:'#5aa9c9',raw:true},
+  {key:'bRight',label:'右胸横围',color:'#a98ad6',raw:true}
+];
+const BUST_FIELDS=[
+  {id:'bUnder1',key:'under1',label:'直立正常呼吸'},
+  {id:'bUnder2',key:'under2',label:'直立吐气'},
+  {id:'bOver1',key:'over1',label:'完全直立'},
+  {id:'bOver2',key:'over2',label:'俯身45°'},
+  {id:'bOver3',key:'over3',label:'俯身90°'},
+  {id:'bLeft',key:'left',label:'左胸横围'},
+  {id:'bRight',key:'right',label:'右胸横围'}
+];
+function avgArr(a){const v=a.filter(x=>!isNaN(x)&&x!=null);if(!v.length)return null;return Math.round(v.reduce((s,x)=>s+x,0)/v.length*10)/10;}
+function calcBraSize(rec){
+  const under=avgArr([rec.under1,rec.under2]);
+  const over=avgArr([rec.over1,rec.over2,rec.over3]);
+  if(under==null||over==null)return null;
+  const diff=over-under;
+  const cups=[{d:10,c:'A'},{d:12.5,c:'B'},{d:15,c:'C'},{d:17.5,c:'D'},{d:20,c:'E'},{d:22.5,c:'F'},{d:25,c:'G'},{d:27.5,c:'H'}];
+  let cup='AA';
+  for(const c of cups){if(diff>=c.d)cup=c.c;else break;}
+  const band=Math.round(under/5)*5;
+  return {band,cup,size:band+cup,under,over,diff:Math.round(diff*10)/10};
+}
+function enrichBust(r){
+  const under=avgArr([r.under1,r.under2]);
+  const over=avgArr([r.over1,r.over2,r.over3]);
+  if(under!=null)r.underAvg=under;
+  if(over!=null)r.overAvg=over;
+  return r;
+}
+function saveBust(){
+  const date=document.getElementById('bustDate').value||today();
+  const rec={date,createdAt:nowISO()};let any=false;
+  BUST_FIELDS.forEach(f=>{const v=parseFloat(document.getElementById(f.id).value);if(!isNaN(v)){rec[f.key]=v;any=true;}else rec[f.key]=null;});
+  const note=document.getElementById('bNote').value.trim();if(note)rec.note=note;
+  if(!any){toast('请至少填写一项胸围数值');return;}
+  enrichBust(rec);DB.add('bust',rec);
+  BUST_FIELDS.forEach(f=>document.getElementById(f.id).value='');
+  document.getElementById('bNote').value='';
+  try{localStorage.removeItem('kspace_bust_seeded');}catch(e){}
+  document.getElementById('bClearSeed').style.display='none';
+  const size=calcBraSize(rec);
+  toast(size?'已保存，推算尺码 '+size.size:'已保存');
+  renderBust();
+}
+function clearBustSeed(){ask('清空全部胸围数据？（建议先在「设置与备份」导出 JSON 备份）',()=>{DB.save('bust',[]);try{localStorage.removeItem('kspace_bust_seeded');}catch(e){}toast('已清空');renderBust();});}
 function saveGirth(){
   const date=document.getElementById('girthDate').value||today();
   const rec={date,createdAt:nowISO()};let any=false;
@@ -1180,6 +1293,61 @@ function drawGirthTrend(canvas,recs){
   ctx.strokeStyle='#e2ead8';ctx.lineWidth=1;for(let i=0;i<=4;i++){const y=padT+plotH*i/4;ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(cssW-padR,y);ctx.stroke();}
   const yV=v=>padT+plotH*(1-(v-min)/(max-min));
   GIRTH_PARTS.forEach(p=>{
+    ctx.strokeStyle=p.color;ctx.lineWidth=2.2;ctx.beginPath();let started=false;
+    w.forEach((r,i)=>{const v=r[p.key];if(v==null){return;}const x=xAt(i),yy=yV(v);if(!started){ctx.moveTo(x,yy);started=true;}else ctx.lineTo(x,yy);});
+    ctx.stroke();
+    ctx.fillStyle=p.color;w.forEach((r,i)=>{const v=r[p.key];if(v==null)return;ctx.beginPath();ctx.arc(xAt(i),yV(v),2.6,0,7);ctx.fill();});
+  });
+  ctx.fillStyle='#7a8a72';ctx.textAlign='center';const step=Math.max(1,Math.ceil(n/6));
+  for(let i=0;i<n;i+=step){ctx.fillText(w[i].date.slice(5),xAt(i),cssH-6);}
+}
+function renderBust(){
+  const dEl=document.getElementById('bustDate');if(!dEl.value)dEl.value=today();
+  const arr=DB.load('bust').map(r=>enrichBust({...r})).slice().sort((a,b)=>a.date<b.date?-1:1);
+  const last=arr[arr.length-1];
+  const lg=document.getElementById('bLegend');
+  lg.innerHTML=BUST_PARTS.map(p=>`<span><i class="sw" style="border-color:${p.color}"></i>${p.label}${last&&last[p.key]!=null?' '+last[p.key]+' cm':''}</span>`).join('');
+  drawBustTrend(document.getElementById('bustChart'),arr);
+  const box=document.getElementById('bustList');box.innerHTML='';
+  const groups={};arr.forEach(r=>{const m=r.date.slice(0,7);groups[m]=groups[m]||[];groups[m].push(r);});
+  const months=Object.keys(groups).sort((a,b)=>a<b?1:-1);
+  if(!months.length){box.innerHTML='<div class="empty">还没有胸围记录</div>';document.getElementById('bClearSeed').style.display='none';return;}
+  months.forEach(m=>{
+    const list=groups[m];
+    const header=document.createElement('div');header.className='month-header';
+    header.innerHTML=`<div><b>${m.replace('-','年')}月</b> <span class="tag">${list.length} 条</span></div><span class="arrow">▼</span>`;
+    const body=document.createElement('div');body.className='month-body';
+    list.slice().sort((a,b)=>a.date<b.date?1:-1).forEach(r=>{
+      const size=calcBraSize(r);
+      const parts=BUST_FIELDS.filter(f=>r[f.key]!=null).map(f=>`${f.label} ${r[f.key]} cm`);
+      const d=document.createElement('div');d.className='bubble';
+      d.innerHTML=`<div class="b-top"><span class="b-tag">胸围</span><span class="b-time">${r.date}<button class="del" onclick="delRec('bust','${r.id}',renderBust)">删除</button></span></div><div class="b-body">${size?'<div style="font-weight:700;color:var(--main);margin-bottom:4px;">推算尺码 '+size.size+' <span style="font-weight:400;color:var(--soft);font-size:13px;">('+size.under+'/'+size.over+'，差 '+size.diff+'cm)</span></div>':''}${parts.join(' · ')||'无数据'}${r.note?'<div style="color:var(--soft);font-size:13px;margin-top:4px;">'+r.note+'</div>':''}</div>`;
+      body.appendChild(d);
+    });
+    header.onclick=()=>{body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
+    box.appendChild(header);box.appendChild(body);
+  });
+  let seeded=false;try{seeded=!!localStorage.getItem('kspace_bust_seeded');}catch(e){}
+  document.getElementById('bClearSeed').style.display=seeded?'inline-block':'none';
+}
+function drawBustTrend(canvas,recs){
+  if(!canvas)return;const dpr=window.devicePixelRatio||1;
+  const box=canvas.parentElement;const cssW=box.clientWidth||300,cssH=box.clientHeight||220;
+  canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';canvas.width=cssW*dpr;canvas.height=cssH*dpr;
+  const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);
+  const w=recs.slice().sort((a,b)=>a.date<b.date?-1:1);
+  if(w.length<2){ctx.fillStyle='#7a8a72';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText('至少 2 条记录可绘制趋势',cssW/2,cssH/2);return;}
+  const padL=40,padR=16,padT=12,padB=24;const plotW=cssW-padL-padR,plotH=cssH-padT-padB;const n=w.length;
+  const xAt=i=>padL+plotW*i/(n-1);
+  let min=Infinity,max=-Infinity;
+  w.forEach(r=>BUST_PARTS.forEach(p=>{const v=r[p.key];if(v!=null){if(v<min)min=v;if(v>max)max=v;}}));
+  if(min===max){min-=1;max+=1;}
+  const pp=(max-min)*0.15;min-=pp;max+=pp;
+  ctx.fillStyle='#7a8a72';ctx.font='11px sans-serif';ctx.textAlign='right';
+  for(let i=0;i<=4;i++){const y=padT+plotH*i/4;const v=max-(max-min)*i/4;ctx.fillText(v.toFixed(0),padL-5,y+4);}
+  ctx.strokeStyle='#e2ead8';ctx.lineWidth=1;for(let i=0;i<=4;i++){const y=padT+plotH*i/4;ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(cssW-padR,y);ctx.stroke();}
+  const yV=v=>padT+plotH*(1-(v-min)/(max-min));
+  BUST_PARTS.forEach(p=>{
     ctx.strokeStyle=p.color;ctx.lineWidth=2.2;ctx.beginPath();let started=false;
     w.forEach((r,i)=>{const v=r[p.key];if(v==null){return;}const x=xAt(i),yy=yV(v);if(!started){ctx.moveTo(x,yy);started=true;}else ctx.lineTo(x,yy);});
     ctx.stroke();

@@ -58,6 +58,18 @@ create table if not exists steps (
   data jsonb not null,
   created_at timestamptz default now()
 );
+create table if not exists girth (
+  id text primary key,
+  user_id uuid not null,
+  data jsonb not null,
+  created_at timestamptz default now()
+);
+create table if not exists bust (
+  id text primary key,
+  user_id uuid not null,
+  data jsonb not null,
+  created_at timestamptz default now()
+);
 
 -- ===== 设置表（每账号一行，user_id 即主键） =====
 create table if not exists settings (
@@ -77,13 +89,15 @@ alter table journal enable row level security;
 alter table supp enable row level security;
 alter table med enable row level security;
 alter table steps enable row level security;
+alter table girth enable row level security;
+alter table bust enable row level security;
 alter table settings enable row level security;
 
 -- 为每张表创建「仅本人」策略（select/insert/update/delete 都限定 user_id = auth.uid()）
 do $$
 declare t text;
 begin
-  foreach t in array array['weight','food','exercise','period','todo','journal','supp','med','steps','settings']
+  foreach t in array array['weight','food','exercise','period','todo','journal','supp','med','steps','girth','bust','settings']
   loop
     execute format('drop policy if exists own_%1$s on %1$s;', t);
     execute format('create policy own_%1$s on %1$s for all using (auth.uid() = user_id) with check (auth.uid() = user_id);', t);
