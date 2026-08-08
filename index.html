@@ -253,7 +253,6 @@
     <button class="nav-item active" data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6H10v6H6a2 2 0 0 1-2-2z"/></svg>今日速览</button>
     <button class="nav-item" data-view="weight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6v9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V9a6 6 0 0 0-6-6z"/><path d="M9 9h6"/></svg>体重记录</button>
     <button class="nav-item" data-view="girth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v10H3z"/><path d="M7 7v3M11 7v5M15 7v3M19 7v5"/></svg>围度记录</button>
-    <button class="nav-item" data-view="bust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21c4.5-3 7-6.5 7-10a7 7 0 0 0-14 0c0 3.5 2.5 7 7 10z"/><path d="M12 11v4"/><circle cx="12" cy="8" r="1.5"/></svg>胸围卡</button>
     <button class="nav-item" data-view="food"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4"/></svg>饮食记录</button>
     <button class="nav-item" data-view="exercise"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4v16M18 4v16M2 9h4M2 15h4M18 9h4M18 15h4M6 12h12"/></svg>运动记录</button>
     <button class="nav-item" data-view="period"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>经期记录</button>
@@ -491,10 +490,6 @@
         <h3>历史记录</h3>
         <div id="girthList"></div>
       </div>
-    </section>
-
-    <!-- 胸围卡 -->
-    <section class="view" id="view-bust">
       <div class="card">
         <h3>记录胸围</h3>
         <div class="row">
@@ -536,7 +531,7 @@
         <div class="chart-box" style="height:240px;"><canvas id="bustChart"></canvas></div>
       </div>
       <div class="card">
-        <h3>历史记录</h3>
+        <h3>胸围历史记录</h3>
         <div id="bustList"></div>
       </div>
     </section>
@@ -949,7 +944,7 @@ async function aiAnalyze(type,text,photos){
 }
 
 /* ============ 路由 ============ */
-const TITLES={today:'今日速览',weight:'体重记录',girth:'围度记录',bust:'胸围卡',food:'饮食记录',exercise:'运动记录',period:'经期记录',weekly:'本周复盘',settings:'设置与备份'};
+const TITLES={today:'今日速览',weight:'体重记录',girth:'围度记录',food:'饮食记录',exercise:'运动记录',period:'经期记录',weekly:'本周复盘',settings:'设置与备份'};
 function go(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
@@ -966,7 +961,6 @@ function renderView(v){
   if(v==='exercise')renderExercise();
   if(v==='period')renderPeriod();
   if(v==='girth')renderGirth();
-  if(v==='bust')renderBust();
   if(v==='weekly')renderWeekly();
   if(v==='settings')renderSettings();
 }
@@ -1274,6 +1268,7 @@ function renderGirth(){
   });
   const seeded=false;try{seeded=!!localStorage.getItem('kspace_girth_seeded');}catch(e){}
   document.getElementById('gClearSeed').style.display=seeded?'inline-block':'none';
+  renderBust();
 }
 function drawGirthTrend(canvas,recs){
   if(!canvas)return;const dpr=window.devicePixelRatio||1;
