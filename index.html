@@ -346,12 +346,15 @@
         <div class="med-summary" id="medSummary"></div>
         <div class="feed" id="medFeed"></div>
         <div class="row" style="margin-top:10px;"><div style="flex:1;min-width:130px;"><label>注射日期</label><input type="date" id="medDate"></div></div>
-        <div class="btn-row" style="margin-top:8px;"><button class="btn sm peach" onclick="quickMed()">记录注射</button><button class="btn ghost sm" onclick="go('settings')">用药设置</button></div>
+        <div class="btn-row" style="margin-top:8px;"><button class="btn sm peach" onclick="quickMed()">记录注射</button><button class="btn ghost sm" onclick="openMedModal()">用药设置</button></div>
       </div>
     </section>
 
     <!-- 体重记录 -->
     <section class="view" id="view-weight">
+      <div class="card" style="padding:12px;">
+        <button class="btn peach" style="width:100%;" onclick="openBodyModal()">+ 记录体重</button>
+      </div>
       <div class="card">
         <h3>减重进度 <button class="btn sm ghost" style="margin-left:auto;" onclick="openTargetModal()">设置目标</button></h3>
         <div class="row" style="margin-bottom:10px;">
@@ -387,14 +390,12 @@
     <!-- 饮食记录 -->
     <section class="view" id="view-food">
       <div class="card">
-        <div class="row" style="align-items:center;margin-bottom:8px;">
-          <div class="date-nav" style="flex:1;">
-            <button class="icon-btn" onclick="foodDateNav(-1)" aria-label="上一天"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
-            <button class="btn ghost sm" id="foodDateBtn" style="flex:1;text-align:center;" onclick="openFoodCal()"></button>
-            <button class="icon-btn" onclick="foodDateNav(1)" aria-label="下一天"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
-          </div>
-          <button class="btn peach sm" onclick="openFoodModal()">+ 添加食物</button>
+        <div class="date-nav" style="margin-bottom:10px;">
+          <button class="icon-btn" onclick="foodDateNav(-1)" aria-label="上一天"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <button class="btn ghost sm" id="foodDateBtn" style="flex:1;text-align:center;" onclick="openFoodCal()"></button>
+          <button class="icon-btn" onclick="foodDateNav(1)" aria-label="下一天"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
         </div>
+        <button class="btn peach" style="width:100%;margin-bottom:8px;" onclick="openFoodModal()">+ 添加食物</button>
         <div class="grid2">
           <div class="stat"><div class="v" id="fKcal">0</div><div class="k">热量 (kcal)</div></div>
           <div class="stat"><div class="v" id="fP">0</div><div class="k">蛋白质 (g)</div></div>
@@ -440,11 +441,11 @@
       <div class="card">
         <h3>记录步数 <button class="icon-btn" style="margin-left:auto;width:30px;height:30px;border-radius:8px;" onclick="addStepFromPage()" aria-label="保存步数"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></button></h3>
         <p class="sub">从 RingConn App 读数后填入，本周复盘会计算平均步数。</p>
-        <div class="row">
-          <div><label>日期</label><input type="date" id="stepDate"></div>
-          <div><label>步数</label><input type="number" id="stepCount" placeholder="如 8200" style="flex:1;"></div>
+        <div class="row" style="align-items:flex-end;">
+          <div style="flex:1;min-width:130px;"><label>日期</label><input type="date" id="stepDate"></div>
+          <div style="flex:2;min-width:160px;"><label>步数</label><input type="number" id="stepCount" placeholder="如 8200"></div>
         </div>
-        <div id="stepList" class="feed" style="margin-top:10px;"></div>
+        <div id="stepList" style="margin-top:12px;"></div>
       </div>
     </section>
 
@@ -686,8 +687,10 @@
 <div class="modal-mask" id="bodyModal">
   <div class="modal">
     <h3 style="margin:0 0 16px;">新增身体记录</h3>
-    <label>日期</label><input type="date" id="qwDate">
-    <label>时间</label><input type="time" id="qwTime">
+    <div class="row" style="align-items:flex-end;">
+      <div style="flex:2;"><label>日期</label><input type="date" id="qwDate"></div>
+      <div style="flex:1;"><label>时间</label><input type="time" id="qwTime"></div>
+    </div>
     <label>体重 (kg)</label><input type="number" id="qwWeight" step="0.1" inputmode="decimal" placeholder="如 65.4">
     <label>体脂 (%，可选)</label><input type="number" id="qwFat" step="0.1" inputmode="decimal" placeholder="如 28.5">
     <div class="btn-row" style="margin-top:18px;"><button class="btn ghost sm" onclick="closeBodyModal()">取消</button><button class="btn sm" onclick="saveQuickWeight()">保存记录</button></div>
@@ -743,6 +746,25 @@
       </div>
       <div class="wheel-indicator"></div>
     </div>
+  </div>
+</div>
+
+<!-- 用药与减重辅助设置弹窗 -->
+<div class="modal-mask" id="medModal">
+  <div class="modal">
+    <h3 style="margin:0 0 12px;display:flex;justify-content:space-between;align-items:center;">用药与减重辅助 <span class="tag">替尔泊肽等</span></h3>
+    <p class="sub">记录后，AI 在分析饮食/运动时会把这个条件纳入建议（如蛋白摄入、胃肠道反应、低血糖风险等）。</p>
+    <div class="row" style="margin-top:10px;">
+      <div><label>药物名称</label><input type="text" id="modalMedDrug" placeholder="替尔泊肽"></div>
+      <div><label>单次剂量 MG</label><input type="number" id="modalMedDose" step="0.5"></div>
+      <div><label>每周注射次数</label><input type="number" id="modalMedFreq" min="0" max="7"></div>
+    </div>
+    <div class="row">
+      <div><label>用药起始日期</label><input type="date" id="modalMedStart"></div>
+    </div>
+    <label>用药备注（副作用、医生建议等）</label>
+    <textarea id="modalMedNote" rows="2" placeholder="如 腹部注射，偶有恶心"></textarea>
+    <div class="btn-row" style="margin-top:14px;"><button class="btn ghost sm" onclick="closeMedModal()">取消</button><button class="btn sm" onclick="saveMedModal()">保存用药设置</button></div>
   </div>
 </div>
 
@@ -1115,6 +1137,31 @@ function quickMed(){
   if(exist){toast(ds+' 已记录注射');return;}
   DB.add('med',{date:ds,drug:m.drug||'替尔泊肽',dose:m.dose||5,note:m.note||'',createdAt:nowISO()});
   renderMed();renderToday();toast('已记录 '+ds+' 注射');
+}
+function openMedModal(){
+  const s=DB.obj('settings');const m=s.med||{};
+  document.getElementById('modalMedDrug').value=m.drug||'';
+  document.getElementById('modalMedDose').value=m.dose||'';
+  document.getElementById('modalMedFreq').value=m.freq||'';
+  document.getElementById('modalMedStart').value=m.startDate||'';
+  document.getElementById('modalMedNote').value=m.note||'';
+  document.getElementById('medModal').classList.add('open');
+}
+function closeMedModal(){document.getElementById('medModal').classList.remove('open');}
+function saveMedModal(){
+  const s=DB.obj('settings');
+  s.med={
+    drug:document.getElementById('modalMedDrug').value.trim()||'替尔泊肽',
+    dose:parseFloat(document.getElementById('modalMedDose').value)||5,
+    freq:parseInt(document.getElementById('modalMedFreq').value)||1,
+    startDate:document.getElementById('modalMedStart').value,
+    note:document.getElementById('modalMedNote').value.trim()
+  };
+  DB.saveObj('settings',s);
+  closeMedModal();
+  renderMed();
+  renderSettings();
+  toast('已保存用药设置');
 }
 (function(){const el=document.getElementById('todoInput'); if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter')addTodo();});})();
 
@@ -1591,12 +1638,28 @@ function addExFromPage(){
 function renderSteps(){
   const sd=document.getElementById('stepDate');if(sd&&!sd.value)sd.value=today();
   const box=document.getElementById('stepList');if(!box)return;box.innerHTML='';
-  const list=DB.load('steps').slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,7);
+  const list=DB.load('steps').slice().sort((a,b)=>a.date<b.date?1:-1);
   if(!list.length){box.innerHTML='<div class="empty">还没有步数记录</div>';return;}
+  const groups={};
   list.forEach(x=>{
-    const d=document.createElement('div');d.className='bubble';
-    d.innerHTML=`<div class="b-top"><span class="b-tag">步数</span><span class="b-time">${x.date}<button class="del" onclick="delStep('${x.id}')">删除</button></span></div><div class="b-body">${x.count.toLocaleString()} 步</div>`;
-    box.appendChild(d);
+    const k=x.date.slice(0,7);
+    groups[k]=groups[k]||[];groups[k].push(x);
+  });
+  const months=Object.keys(groups).sort((a,b)=>a<b?1:-1);
+  months.forEach(m=>{
+    const items=groups[m].sort((a,b)=>a.date<b.date?1:-1);
+    const total=items.reduce((s,x)=>s+x.count,0);
+    const card=document.createElement('div');card.className='collapse-card';
+    const header=document.createElement('div');header.className='month-header';
+    header.innerHTML=`<div><b>${m.replace('-','年')}月</b> <span style="color:var(--soft);font-size:13px;">${items.length} 条</span></div><div style="display:flex;align-items:center;gap:10px;"><span class="tag">${total.toLocaleString()} 步</span><span class="arrow">▼</span></div>`;
+    const body=document.createElement('div');body.className='month-body';
+    items.forEach(x=>{
+      const d=document.createElement('div');d.className='bubble';
+      d.innerHTML=`<div class="b-top"><span class="b-tag">步数</span><span class="b-time">${x.date}<button class="del" onclick="delStep('${x.id}')">删除</button></span></div><div class="b-body">${x.count.toLocaleString()} 步</div>`;
+      body.appendChild(d);
+    });
+    header.onclick=()=>{body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
+    card.appendChild(header);card.appendChild(body);box.appendChild(card);
   });
 }
 function addStepFromPage(){
