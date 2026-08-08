@@ -1,4 +1,4 @@
-const CACHE = 'kspace-v20';
+const CACHE = 'kspace-v21';
 const ASSETS = ['./','./index.html','./supabase-sync.js','./manifest.webmanifest','./icon.svg','./touch-icon.svg','./icon-512.png'];
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(()=>{})); });
 self.addEventListener('activate', e => {
@@ -8,6 +8,11 @@ self.addEventListener('activate', e => {
     .then(clients => clients.forEach(c => c.postMessage({type:'reload'})))
   );
   self.clients.claim();
+});
+self.addEventListener('message', e => {
+  if(e.data && e.data.type==='getCache' && e.ports && e.ports[0]){
+    e.ports[0].postMessage({cache: CACHE});
+  }
 });
 self.addEventListener('fetch', e => {
   const req = e.request;
