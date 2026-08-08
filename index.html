@@ -250,6 +250,7 @@
   <nav id="navList">
     <button class="nav-item active" data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6H10v6H6a2 2 0 0 1-2-2z"/></svg>今日速览</button>
     <button class="nav-item" data-view="weight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6v9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V9a6 6 0 0 0-6-6z"/><path d="M9 9h6"/></svg>体重记录</button>
+    <button class="nav-item" data-view="girth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v10H3z"/><path d="M7 7v3M11 7v5M15 7v3M19 7v5"/></svg>围度记录</button>
     <button class="nav-item" data-view="food"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4"/></svg>饮食记录</button>
     <button class="nav-item" data-view="exercise"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4v16M18 4v16M2 9h4M2 15h4M18 9h4M18 15h4M6 12h12"/></svg>运动记录</button>
     <button class="nav-item" data-view="period"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>经期记录</button>
@@ -454,6 +455,38 @@
         <h3>摘要</h3>
         <div class="feed" id="periodSummary"></div>
         <div id="periodList"></div>
+      </div>
+    </section>
+
+    <!-- 围度记录 -->
+    <section class="view" id="view-girth">
+      <div class="card">
+        <h3>记录围度</h3>
+        <div class="row">
+          <div style="flex:1;min-width:130px;"><label>日期</label><input type="date" id="girthDate"></div>
+        </div>
+        <div class="grid2" style="margin-top:10px;">
+          <div><label>腰围 (cm)</label><input type="number" id="gWaist" step="0.1" inputmode="decimal" placeholder="如 72.5"></div>
+          <div><label>手臂 (cm)</label><input type="number" id="gArm" step="0.1" inputmode="decimal" placeholder="如 28.0"></div>
+          <div><label>臀围 (cm)</label><input type="number" id="gHip" step="0.1" inputmode="decimal" placeholder="如 95.0"></div>
+          <div><label>大腿 (cm)</label><input type="number" id="gThigh" step="0.1" inputmode="decimal" placeholder="如 52.0"></div>
+          <div><label>小腿 (cm)</label><input type="number" id="gCalf" step="0.1" inputmode="decimal" placeholder="如 35.0"></div>
+          <div></div>
+        </div>
+        <label>备注</label><input type="text" id="gNote" placeholder="可选，如 晨起空腹测量">
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn sm" onclick="saveGirth()">保存记录</button>
+          <button class="btn ghost sm" id="gClearSeed" style="display:none;" onclick="clearGirthSeed()">清空示例</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>围度趋势</h3>
+        <div class="legend" id="gLegend"></div>
+        <div class="chart-box" style="height:240px;"><canvas id="girthChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>历史记录</h3>
+        <div id="girthList"></div>
       </div>
     </section>
 
@@ -679,7 +712,7 @@
 "use strict";
 /* ============ 存储层（本地优先 + 云端镜像） ============ */
 const DB={
-  K:{weight:'kspace_weight',food:'kspace_food',exercise:'kspace_exercise',period:'kspace_period',todo:'kspace_todo',journal:'kspace_journal',settings:'kspace_settings',supp:'kspace_supp',med:'kspace_med',steps:'kspace_steps'},
+  K:{weight:'kspace_weight',food:'kspace_food',exercise:'kspace_exercise',period:'kspace_period',todo:'kspace_todo',journal:'kspace_journal',settings:'kspace_settings',supp:'kspace_supp',med:'kspace_med',steps:'kspace_steps',girth:'kspace_girth'},
   load(t){try{return JSON.parse(localStorage.getItem(this.K[t])||'[]')}catch(e){return[]}},
   obj(t){try{return JSON.parse(localStorage.getItem(this.K[t])||'{}')}catch(e){return{}}},
   save(t,a){localStorage.setItem(this.K[t],JSON.stringify(a)); if(Cloud.on()){ if(t==='settings')Cloud.bg(()=>Cloud.pushSettings(a)); else Cloud.bg(()=>Cloud.pushSave(t,a)); }},
@@ -774,6 +807,15 @@ function seed(){
   if(DB.load('steps').length===0){
     [0,1,2,3,4,5,6].forEach(d=>DB.add('steps',{date:offset(-d),count:[8200,9100,6400,11000,7800,10200,6900][d],createdAt:nowISO()}));
   }
+  if(DB.load('girth').length===0){
+    const sample=[
+      {date:offset(-28),waist:74.5,arm:28.6,hip:97.0,thigh:53.5,calf:36.2,note:'初始测量'},
+      {date:offset(-14),waist:73.2,arm:28.2,hip:96.0,thigh:52.5,calf:35.6,note:''},
+      {date:offset(0),waist:71.8,arm:27.8,hip:94.5,thigh:51.0,calf:34.9,note:''}
+    ];
+    sample.forEach(r=>{r.createdAt=nowISO();DB.add('girth',r);});
+    try{localStorage.setItem('kspace_girth_seeded','1');}catch(e){}
+  }
   const s=DB.obj('settings');
   if(!s.kcal){Object.assign(s,DEFAULTS);DB.saveObj('settings',s);}
 }
@@ -847,7 +889,7 @@ async function aiAnalyze(type,text,photos){
 }
 
 /* ============ 路由 ============ */
-const TITLES={today:'今日速览',weight:'体重记录',food:'饮食记录',exercise:'运动记录',period:'经期记录',weekly:'本周复盘',settings:'设置与备份'};
+const TITLES={today:'今日速览',weight:'体重记录',girth:'围度记录',food:'饮食记录',exercise:'运动记录',period:'经期记录',weekly:'本周复盘',settings:'设置与备份'};
 function go(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
@@ -863,6 +905,7 @@ function renderView(v){
   if(v==='food')renderFood();
   if(v==='exercise')renderExercise();
   if(v==='period')renderPeriod();
+  if(v==='girth')renderGirth();
   if(v==='weekly')renderWeekly();
   if(v==='settings')renderSettings();
 }
@@ -1067,6 +1110,84 @@ function openTargetModal(){const s=DB.obj('settings');document.getElementById('s
 function closeTargetModal(){document.getElementById('targetModal').classList.remove('open');}
 function saveTarget(){const st=parseFloat(document.getElementById('setStart').value);const tg=parseFloat(document.getElementById('setTarget').value);const s=DB.obj('settings');s.startW=isNaN(st)?null:st;s.targetW=tg||s.targetW;DB.saveObj('settings',s);closeTargetModal();renderWeight();renderToday();}
 function quickWeight(){go('weight');}
+
+/* ============ 围度记录 ============ */
+const GIRTH_PARTS=[
+  {key:'waist',label:'腰',color:'#6fae4e'},
+  {key:'arm',label:'手臂',color:'#e0b73f'},
+  {key:'hip',label:'臀',color:'#e08a7a'},
+  {key:'thigh',label:'大腿',color:'#5aa9c9'},
+  {key:'calf',label:'小腿',color:'#a98ad6'}
+];
+function gId(p){return 'g'+p.charAt(0).toUpperCase()+p.slice(1);}
+function saveGirth(){
+  const date=document.getElementById('girthDate').value||today();
+  const rec={date,createdAt:nowISO()};let any=false;
+  GIRTH_PARTS.forEach(p=>{const v=parseFloat(document.getElementById(gId(p.key)).value);if(!isNaN(v)){rec[p.key]=v;any=true;}else rec[p.key]=null;});
+  const note=document.getElementById('gNote').value.trim();if(note)rec.note=note;
+  if(!any){toast('请至少填写一个围度数值');return;}
+  DB.add('girth',rec);
+  GIRTH_PARTS.forEach(p=>document.getElementById(gId(p.key)).value='');
+  document.getElementById('gNote').value='';
+  try{localStorage.removeItem('kspace_girth_seeded');}catch(e){}
+  document.getElementById('gClearSeed').style.display='none';
+  toast('已保存');renderGirth();
+}
+function clearGirthSeed(){ask('清空全部围度数据？（建议先在「设置与备份」导出 JSON 备份）',()=>{DB.save('girth',[]);try{localStorage.removeItem('kspace_girth_seeded');}catch(e){}toast('已清空');renderGirth();});}
+function renderGirth(){
+  const dEl=document.getElementById('girthDate');if(!dEl.value)dEl.value=today();
+  const arr=DB.load('girth').slice().sort((a,b)=>a.date<b.date?-1:1);
+  const last=arr[arr.length-1];
+  const lg=document.getElementById('gLegend');
+  lg.innerHTML=GIRTH_PARTS.map(p=>`<span><i class="sw" style="border-color:${p.color}"></i>${p.label}${last&&last[p.key]!=null?' '+last[p.key]+' cm':''}</span>`).join('');
+  drawGirthTrend(document.getElementById('girthChart'),arr);
+  const box=document.getElementById('girthList');box.innerHTML='';
+  const groups={};arr.forEach(r=>{const m=r.date.slice(0,7);groups[m]=groups[m]||[];groups[m].push(r);});
+  const months=Object.keys(groups).sort((a,b)=>a<b?1:-1);
+  if(!months.length){box.innerHTML='<div class="empty">还没有围度记录</div>';document.getElementById('gClearSeed').style.display='none';return;}
+  months.forEach(m=>{
+    const list=groups[m];
+    const header=document.createElement('div');header.className='month-header';
+    header.innerHTML=`<div><b>${m.replace('-','年')}月</b> <span class="tag">${list.length} 条</span></div><span class="arrow">▼</span>`;
+    const body=document.createElement('div');body.className='month-body';
+    list.slice().sort((a,b)=>a.date<b.date?1:-1).forEach(r=>{
+      const parts=GIRTH_PARTS.filter(pp=>r[pp.key]!=null).map(pp=>`${pp.label} ${r[pp.key]} cm`);
+      const d=document.createElement('div');d.className='bubble';
+      d.innerHTML=`<div class="b-top"><span class="b-tag">围度</span><span class="b-time">${r.date}<button class="del" onclick="delRec('girth','${r.id}',renderGirth)">删除</button></span></div><div class="b-body">${parts.join(' · ')||'无数据'}${r.note?'<div style="color:var(--soft);font-size:13px;margin-top:4px;">'+r.note+'</div>':''}</div>`;
+      body.appendChild(d);
+    });
+    header.onclick=()=>{body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
+    box.appendChild(header);box.appendChild(body);
+  });
+  const seeded=false;try{seeded=!!localStorage.getItem('kspace_girth_seeded');}catch(e){}
+  document.getElementById('gClearSeed').style.display=seeded?'inline-block':'none';
+}
+function drawGirthTrend(canvas,recs){
+  if(!canvas)return;const dpr=window.devicePixelRatio||1;
+  const box=canvas.parentElement;const cssW=box.clientWidth||300,cssH=box.clientHeight||220;
+  canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';canvas.width=cssW*dpr;canvas.height=cssH*dpr;
+  const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);
+  const w=recs.slice().sort((a,b)=>a.date<b.date?-1:1);
+  if(w.length<2){ctx.fillStyle='#7a8a72';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText('至少 2 条记录可绘制趋势',cssW/2,cssH/2);return;}
+  const padL=40,padR=16,padT=12,padB=24;const plotW=cssW-padL-padR,plotH=cssH-padT-padB;const n=w.length;
+  const xAt=i=>padL+plotW*i/(n-1);
+  let min=Infinity,max=-Infinity;
+  w.forEach(r=>GIRTH_PARTS.forEach(p=>{const v=r[p.key];if(v!=null){if(v<min)min=v;if(v>max)max=v;}}));
+  if(min===max){min-=1;max+=1;}
+  const pp=(max-min)*0.15;min-=pp;max+=pp;
+  ctx.fillStyle='#7a8a72';ctx.font='11px sans-serif';ctx.textAlign='right';
+  for(let i=0;i<=4;i++){const y=padT+plotH*i/4;const v=max-(max-min)*i/4;ctx.fillText(v.toFixed(0),padL-5,y+4);}
+  ctx.strokeStyle='#e2ead8';ctx.lineWidth=1;for(let i=0;i<=4;i++){const y=padT+plotH*i/4;ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(cssW-padR,y);ctx.stroke();}
+  const yV=v=>padT+plotH*(1-(v-min)/(max-min));
+  GIRTH_PARTS.forEach(p=>{
+    ctx.strokeStyle=p.color;ctx.lineWidth=2.2;ctx.beginPath();let started=false;
+    w.forEach((r,i)=>{const v=r[p.key];if(v==null){return;}const x=xAt(i),yy=yV(v);if(!started){ctx.moveTo(x,yy);started=true;}else ctx.lineTo(x,yy);});
+    ctx.stroke();
+    ctx.fillStyle=p.color;w.forEach((r,i)=>{const v=r[p.key];if(v==null)return;ctx.beginPath();ctx.arc(xAt(i),yV(v),2.6,0,7);ctx.fill();});
+  });
+  ctx.fillStyle='#7a8a72';ctx.textAlign='center';const step=Math.max(1,Math.ceil(n/6));
+  for(let i=0;i<n;i+=step){ctx.fillText(w[i].date.slice(5),xAt(i),cssH-6);}
+}
 function delRec(t,id,cb){ask('删除这条记录？',()=>{DB.del(t,id);cb();renderToday();renderView(currentView());});}
 
 /* ============ 饮食记录 ============ */
