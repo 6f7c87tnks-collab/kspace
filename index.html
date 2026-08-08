@@ -348,22 +348,6 @@
       </div>
 
       </div>
-
-      <div class="card">
-        <h3>今日计划 <button class="icon-btn" style="margin-left:auto;width:32px;height:32px;border-radius:8px;" onclick="go('exercise')" aria-label="添加"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></h3>
-        <div id="planBody" class="empty">今日还没有训练安排</div>
-      </div>
-
-      <div class="card cream">
-        <h3>减重辅助 <span class="tag" id="medTag"></span></h3>
-        <div class="med-summary" id="medSummary"></div>
-        <div class="feed" id="medFeed"></div>
-        <div class="row" style="margin-top:10px;align-items:flex-end;">
-          <div style="flex:2;min-width:130px;"><label>注射日期</label><input type="date" id="medDate"></div>
-          <div style="flex:1;min-width:80px;"><label>第x次</label><input type="number" id="medShotNum" min="1" placeholder="如 4"></div>
-        </div>
-        <div class="btn-row" style="margin-top:8px;"><button class="btn sm peach" onclick="quickMed()">记录注射</button><button class="btn ghost sm" onclick="openMedModal()">用药设置</button></div>
-      </div>
     </section>
 
     <!-- 体重记录 -->
@@ -1140,12 +1124,6 @@ function renderToday(){
   document.getElementById('actStatus').textContent=status;
   // 待办
   renderTodo();
-  // 今日计划
-  const wkExs=DB.load('exercise').filter(x=>x.date===td);
-  if(wkExs.length){document.getElementById('planBody').innerHTML=wkExs.map(x=>`<div>· ${x.text} <span style="color:var(--soft);">(${x.kcal} kcal)</span></div>`).join('');}
-  else{document.getElementById('planBody').className='empty';document.getElementById('planBody').textContent='今日还没有训练安排，休息也是计划的一部分。';}
-  // 用药
-  renderMed();
   // 今日饮水
   renderWaterCard();
 }
@@ -1171,7 +1149,9 @@ function delTodo(id){DB.del('todo',id);renderTodo();}
 /* 用药记录 / 减重辅助 */
 function renderMed(){
   const s=DB.obj('settings');const m=s.med||{};
-  const md=document.getElementById('medDate');if(md&&!md.value)md.value=today();
+  const md=document.getElementById('medDate');
+  if(!md)return; // 今日速览已移除，只在有 DOM 的页面渲染
+  if(!md.value)md.value=today();
   const ms=document.getElementById('medShotNum');
   if(ms){
     const list=DB.load('med');
@@ -1182,12 +1162,13 @@ function renderMed(){
   if(summary){
     summary.innerHTML=`<div class="cell"><div class="label">药物名称</div><div class="value">${m.drug||'未设置'}</div></div><div class="cell"><div class="label">单次剂量 MG</div><div class="value">${m.dose||'–'}</div></div>`;
   }
-  const feed=document.getElementById('medFeed');feed.innerHTML='';
+  const feed=document.getElementById('medFeed');
+  if(feed)feed.innerHTML='';
   const list=DB.load('med').slice().sort((a,b)=>a.date<b.date?1:-1);
   const tag=document.getElementById('medTag');
-  if(!list.length){tag.textContent='未记录';feed.innerHTML='<div class="empty">还没有注射记录</div>';return;}
-  tag.textContent='最近 '+list[0].date;
-  list.slice(0,5).forEach(x=>{
+  if(!list.length){if(tag)tag.textContent='未记录';if(feed)feed.innerHTML='<div class="empty">还没有注射记录</div>';return;}
+  if(tag)tag.textContent='最近 '+list[0].date;
+  if(feed)list.slice(0,5).forEach(x=>{
     const d=document.createElement('div');d.className='bubble';d.style.background='#fffdf2';
     d.innerHTML=`<div class="b-top"><span class="b-tag">${x.drug||'注射'}</span><span class="b-time">${x.date}<button class="del" onclick="delMed('${x.id}')">删除</button></span></div><div class="b-body">${x.shotNum?'第 '+x.shotNum+' 次 · ':''}${x.dose?x.dose+'mg · ':''}${x.note||''}</div>`;
     feed.appendChild(d);
@@ -1196,10 +1177,12 @@ function renderMed(){
 function delMed(id){DB.del('med',id);renderMed();renderToday();}
 function quickMed(){
   const s=DB.obj('settings');const m=s.med||{};
-  const ds=document.getElementById('medDate').value||today();
+  const md=document.getElementById('medDate');
+  const sn=document.getElementById('medShotNum');
+  const ds=(md&&md.value)?md.value:today();
   const exist=DB.load('med').find(x=>x.date===ds);
   if(exist){toast(ds+' 已记录注射');return;}
-  const shotNum=parseInt(document.getElementById('medShotNum').value)||(DB.load('med').length+1);
+  const shotNum=sn?parseInt(sn.value)||(DB.load('med').length+1):(DB.load('med').length+1);
   DB.add('med',{date:ds,drug:m.drug||'替尔泊肽',dose:m.dose||5,shotNum,note:m.note||'',createdAt:nowISO()});
   renderMed();renderToday();toast('已记录 '+ds+' 第 '+shotNum+' 次注射');
 }
@@ -1225,6 +1208,7 @@ function saveMedModal(){
   DB.saveObj('settings',s);
   closeMedModal();
   renderMed();
+  renderWeight();
   renderSettings();
   toast('已保存用药设置');
 }
