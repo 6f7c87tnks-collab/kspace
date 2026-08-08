@@ -191,10 +191,10 @@
   .date-nav .icon-btn{width:38px;height:38px;border-radius:10px;}
   #foodDateBtn{white-space:nowrap;min-width:140px;}
   /* med summary in today view */
-  .med-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
-  .med-summary .cell{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 6px;text-align:center;}
-  .med-summary .cell .label{font-size:12px;color:var(--soft);margin-bottom:4px;}
-  .med-summary .cell .value{font-size:16px;font-weight:600;color:var(--ink);}
+  .med-summary{display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;margin-bottom:14px;}
+  .med-summary .cell{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center;min-width:0;}
+  .med-summary .cell .label{font-size:12px;color:var(--soft);margin-bottom:4px;white-space:nowrap;}
+  .med-summary .cell .value{font-size:16px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   /* collapse */
   .collapse-card{padding:0;overflow:hidden;}
   .day-header,.month-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer;background:#fff;}
@@ -451,8 +451,8 @@
         <h3>记录步数 <button class="icon-btn" style="margin-left:auto;width:30px;height:30px;border-radius:8px;" onclick="addStepFromPage()" aria-label="保存步数"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></button></h3>
         <p class="sub">从 RingConn App 读数后填入，本周复盘会计算平均步数。</p>
         <div class="row" style="align-items:flex-end;">
-          <div style="flex:1;min-width:130px;"><label>日期</label><input type="date" id="stepDate"></div>
-          <div style="flex:2;min-width:160px;"><label>步数</label><input type="number" id="stepCount" placeholder="如 8200"></div>
+          <div style="flex:0 0 150px;max-width:45%;"><label>日期</label><input type="date" id="stepDate" style="width:100%;box-sizing:border-box;"></div>
+          <div style="flex:1;min-width:140px;"><label>步数</label><input type="number" id="stepCount" placeholder="如 8200" style="width:100%;box-sizing:border-box;"></div>
         </div>
         <div id="stepList" style="margin-top:12px;"></div>
       </div>
@@ -1017,7 +1017,7 @@ async function aiAnalyze(type,text,photos){
   const content=[{type:'text',text:userText}];
   photos.forEach(p=>content.push({type:'image_url',image_url:{url:p}}));
   try{
-    const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key},body:JSON.stringify({model:s.model||'gpt-4o-mini',messages:[{role:'system',content:system},{role:'user',content}],max_tokens:800})});
+    const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model:s.model||'gpt-4o-mini',messages:[{role:'system',content:system},{role:'user',content}],max_tokens:800})});
     if(!res.ok){toast(friendlyAiErr(null,res.status));return null;}
     const data=await res.json();
     const txt=data.choices?.[0]?.message?.content||'';
@@ -1084,6 +1084,8 @@ function compressImg(file,maxW,cb){const reader=new FileReader();reader.onload=(
 
 /* ============ 今日速览 ============ */
 function renderToday(){
+  const todayView=document.getElementById('view-today');
+  if(!todayView||!todayView.classList.contains('active')) return;
   const s=DB.obj('settings');const nick=s.nick||'K';
   const h=new Date().getHours();const greet=h<11?'早上好':h<13?'中午好':h<18?'下午好':'晚上好';
   document.getElementById('heroGreet').innerHTML=`${greet} · <span>${nick}</span>`;
@@ -2249,7 +2251,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v24';
+const KSPACE_VERSION='kspace-v25';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
