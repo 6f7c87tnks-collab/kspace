@@ -640,8 +640,8 @@
         <label class="chk"><input type="checkbox" id="aiEnable"> 启用 AI 自动解析照片</label>
         <label>API 端点</label><input type="text" id="aiEndpoint" placeholder="https://openrouter.ai/api/v1/chat/completions">
         <label>API Key</label><input type="password" id="aiKey" placeholder="sk-...">
-        <label>模型</label><input type="text" id="aiModel" placeholder="openai/gpt-4o-mini">
-        <p class="sub">Key 仅保存在本机浏览器，不会上传服务器。⚠️ OpenAI 官方端点不允许浏览器直连（会报跨域/CORS 错误），建议用 OpenRouter、自建代理或本地 Ollama。OpenRouter 一个 Key 可用多家模型且支持浏览器调用。</p>
+        <label>模型</label><input type="text" id="aiModel" placeholder="openai/qwen/qwen-vl-plus">
+        <p class="sub">Key 仅保存在本机浏览器，不会上传服务器。⚠️ OpenAI 官方端点不允许浏览器直连（会报跨域/CORS 错误），建议用 OpenRouter、自建代理或本地 Ollama。OpenRouter 一个 Key 可用多家模型，但 OpenAI/Anthropic/Google 模型在部分地区不可用；如遇 401/403 请换用 DeepSeek、Qwen 等模型。</p>
         <div class="btn-row" style="margin-top:10px;"><button class="btn sm" onclick="saveSettings()">保存 AI 设置</button></div>
       </div>
       <div class="card">
@@ -972,12 +972,13 @@ function migrate(){
 /* ============ AI 解析 ============ */
 function aiSettings(){return DB.obj('settings').ai||{};}
 function aiEnabled(){const s=aiSettings();return !!s.enable && s.endpoint && s.key;}
-/* 把 AI 请求的错误翻译成人话（重点提示 CORS） */
+/* 把 AI 请求的错误翻译成人话（重点提示 CORS / 地区限制） */
 function friendlyAiErr(e,status){
   const m=(e&&e.message||'').toLowerCase();
   if(m.includes('failed to fetch')||m.includes('networkerror')||m.includes('load failed')||m.includes('type error'))
     return 'AI 请求失败：多为跨域(CORS)或网络问题。OpenAI 官方端点不允许浏览器直连，请把 API 端点改为 OpenRouter（https://openrouter.ai/api/v1/chat/completions）或自建代理后重试';
-  if(status===401) return 'AI 失败：Key 无效或无权限（401），检查 API Key';
+  if(status===401) return 'AI 失败：Key 无效、无权限或所选模型在你所在地区不可用（401）。请检查 API Key，并在 OpenRouter 控制台确认该模型可调用';
+  if(status===403) return 'AI 失败：所选模型在你所在地区不可用（403）。建议换成 DeepSeek/Qwen 等可用模型';
   if(status===429) return 'AI 失败：请求频繁或额度用完（429），稍后再试';
   if(status===404) return 'AI 失败：端点或模型不存在（404），检查 API 端点与模型名';
   if(status) return 'AI 失败：HTTP '+status;
@@ -1017,7 +1018,7 @@ async function aiAnalyze(type,text,photos){
   const content=[{type:'text',text:userText}];
   photos.forEach(p=>content.push({type:'image_url',image_url:{url:p}}));
   try{
-    const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model:s.model||'gpt-4o-mini',messages:[{role:'system',content:system},{role:'user',content}],max_tokens:800})});
+    const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model:s.model||'qwen/qwen-vl-plus',messages:[{role:'system',content:system},{role:'user',content}],max_tokens:800})});
     if(!res.ok){toast(friendlyAiErr(null,res.status));return null;}
     const data=await res.json();
     const txt=data.choices?.[0]?.message?.content||'';
@@ -1676,7 +1677,7 @@ async function sendMeal(meal){
   const text=document.getElementById('mt_'+meal).value.trim();
   if(!text&&!mealPhotos[meal].length){toast('写点或拍张吧');return;}
   let items=[],note=text,kcal=0;
-  if(mealPhotos[meal].length && aiEnabled()){toast('AI 解析中…');const ai=await aiAnalyze('food',text||'',mealPhotos[meal]);if(ai){items=(ai.items||[]).map(i=>({text:i.name,food:i.name,grams:i.grams||0,kcal:i.kcal||0,p:i.p||0,c:i.c||0,f:i.f||0}));kcal=items.reduce((a,b)=>a+b.kcal,0);if(!text&&ai.note)note=ai.note;}}
+  if(mealPhotos[meal].length && aiEnabled()){toast('AI 解析中…');const ai=await aiAnalyze('food',text||'',mealPhotos[meal]);if(ai){items=(ai.items||[]).map(i=>({text:i.name,food:i.name,grams:i.grams||0,kcal:i.kcal||0,p:i.p||0,c:i.c||0,f:i.f||0}));kcal=items.reduce((a,b)=>a+b.kcal,0);if(!text&&ai.note)note=ai.note;}else if(!text){toast('AI 解析失败，请检查模型是否可用，或手动输入食物名称');return;}}
   if(!items.length&&text){items=parseFood(text);kcal=items.reduce((a,b)=>a+b.kcal,0);}
   DB.add('food',{date:foodDate,meal,text:note||'(照片记录)',items,photos:mealPhotos[meal],kcal,water:0,createdAt:nowISO()});
   mealPhotos[meal]=[];document.getElementById('mt_'+meal).value='';document.getElementById('mc_'+meal).style.display='none';document.getElementById('mf_'+meal).value='';
@@ -1689,7 +1690,7 @@ async function sendFoodModal(){
   const text=document.getElementById('foodModalText').value.trim();
   if(!text&&!foodModalPhotos.length){toast('写点或拍张吧');return;}
   let items=[],note=text,kcal=0;
-  if(foodModalPhotos.length && aiEnabled()){toast('AI 解析中…');const ai=await aiAnalyze('food',text||'',foodModalPhotos);if(ai){items=(ai.items||[]).map(i=>({text:i.name,food:i.name,grams:i.grams||0,kcal:i.kcal||0,p:i.p||0,c:i.c||0,f:i.f||0}));kcal=items.reduce((a,b)=>a+b.kcal,0);if(!text&&ai.note)note=ai.note;}}
+  if(foodModalPhotos.length && aiEnabled()){toast('AI 解析中…');const ai=await aiAnalyze('food',text||'',foodModalPhotos);if(ai){items=(ai.items||[]).map(i=>({text:i.name,food:i.name,grams:i.grams||0,kcal:i.kcal||0,p:i.p||0,c:i.c||0,f:i.f||0}));kcal=items.reduce((a,b)=>a+b.kcal,0);if(!text&&ai.note)note=ai.note;}else if(!text){toast('AI 解析失败，请检查模型是否可用，或手动输入食物名称');return;}}
   if(!items.length&&text){items=parseFood(text);kcal=items.reduce((a,b)=>a+b.kcal,0);}
   DB.add('food',{date:foodDate,meal:foodModalMeal,text:note||'(照片记录)',items,photos:foodModalPhotos,kcal,water:0,createdAt:nowISO()});
   foodModalPhotos=[];renderPreviews('foodModalPreviews',foodModalPhotos,'removeFoodModalPhoto');document.getElementById('foodModalText').value='';
@@ -1714,7 +1715,7 @@ async function sendSupp(){
   const text=document.getElementById('suppText').value.trim();
   if(!text&&!suppPhotos.length){toast('写点或拍张吧');return;}
   let items=[],note=text;
-  if(suppPhotos.length && aiEnabled()){toast('AI 解析中…');const ai=await aiAnalyze('supp',text||'',suppPhotos);if(ai){items=(ai.items||[]).map(i=>({name:i.name,dose:i.dose||'',note:i.note||''}));if(!text&&ai.note)note=ai.note;}}
+  if(suppPhotos.length && aiEnabled()){toast('AI 解析中…');const ai=await aiAnalyze('supp',text||'',suppPhotos);if(ai){items=(ai.items||[]).map(i=>({name:i.name,dose:i.dose||'',note:i.note||''}));if(!text&&ai.note)note=ai.note;}else if(!text){toast('AI 解析失败，请检查模型是否可用，或手动输入营养剂名称');return;}}
   const txt=text||items.map(i=>`${i.name}${i.dose?' '+i.dose:''}`).join('、')||'(照片记录)';
   DB.add('supp',{date:foodDate,text:txt,items,photos:suppPhotos,createdAt:nowISO()});
   suppPhotos=[];renderPreviews('suppPreviews',suppPhotos,'removeSuppPhoto');document.getElementById('suppText').value='';
@@ -2015,7 +2016,7 @@ function renderSettings(){
   document.getElementById('aiEnable').checked=!!ai.enable;
   document.getElementById('aiEndpoint').value=ai.endpoint||'';
   document.getElementById('aiKey').value=ai.key||'';
-  document.getElementById('aiModel').value=ai.model||'gpt-4o-mini';
+  document.getElementById('aiModel').value=ai.model||'qwen/qwen-vl-plus';
   // 估算
   const ws=DB.load('weight');const cur=ws.length?ws[ws.length-1].weight:(s.startW||60);
   const h=s.height||165;const age=s.age||30;const g=s.gender||'female';
@@ -2139,7 +2140,7 @@ function saveSettings(){
     enable:document.getElementById('aiEnable').checked,
     endpoint:document.getElementById('aiEndpoint').value.trim(),
     key:document.getElementById('aiKey').value.trim(),
-    model:document.getElementById('aiModel').value.trim()||'gpt-4o-mini'
+    model:document.getElementById('aiModel').value.trim()||'qwen/qwen-vl-plus'
   };
   DB.saveObj('settings',s);toast('已保存');renderToday();renderWeight();renderFood();renderWeekly();
 }
@@ -2152,7 +2153,7 @@ async function aiCalcTargets(){
   const userText='Profile: '+JSON.stringify(profile);
   const btn=document.getElementById('aiCalcBtn');btn.disabled=true;btn.textContent='计算中…';
   try{
-    const res=await fetch(aiSettings().endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+aiSettings().key},body:JSON.stringify({model:aiSettings().model||'gpt-4o-mini',messages:[{role:'system',content:sys},{role:'user',content:userText}],max_tokens:300})});
+    const res=await fetch(aiSettings().endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+aiSettings().key},body:JSON.stringify({model:aiSettings().model||'qwen/qwen-vl-plus',messages:[{role:'system',content:sys},{role:'user',content:userText}],max_tokens:300})});
     if(!res.ok){toast(friendlyAiErr(null,res.status));return;}
     const data=await res.json();const txt=data.choices?.[0]?.message?.content||'';
     const r=JSON.parse(txt.replace(/```json|```/g,'').trim());
@@ -2242,8 +2243,9 @@ function drawTrend(canvas,recs,combined){
 }
 
 /* ============ 导航 ============ */
-let currentView='today';
-function go(v){currentView=v;const sec=document.getElementById('view-'+v);if(!sec)return;document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));sec.classList.add('active');document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));const pt=document.getElementById('pageTitle');if(pt)pt.textContent=TITLES[v]||v;if(window.innerWidth<900)document.body.classList.remove('nav-open');window.scrollTo(0,0);renderView(v);}
+let currentViewName='today';
+function currentView(){return currentViewName;}
+function go(v){currentViewName=v;const sec=document.getElementById('view-'+v);if(!sec)return;document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));sec.classList.add('active');document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));const pt=document.getElementById('pageTitle');if(pt)pt.textContent=TITLES[v]||v;if(window.innerWidth<900)document.body.classList.remove('nav-open');window.scrollTo(0,0);renderView(v);}
 (function(){const nt=document.getElementById('navToggle'); if(nt)nt.onclick=()=>document.body.classList.toggle('nav-open');})();
 (function(){const mk=document.getElementById('mask'); if(mk)mk.onclick=()=>document.body.classList.remove('nav-open');})();
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>go(b.dataset.view));
@@ -2251,7 +2253,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v25';
+const KSPACE_VERSION='kspace-v26';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
