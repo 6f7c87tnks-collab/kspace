@@ -310,13 +310,22 @@
         <div id="todoList" class="feed" style="margin-top:10px;"></div>
       </div>
 
-      <div class="card">
-        <h3>今日能量 <span class="tag">估算填可在设置中调整</span></h3>
-        <div class="stat-row"><div><div class="k">已摄入</div><div class="v" id="enIn">0 <span style="font-size:14px;color:var(--soft);">kcal</span></div></div><div style="text-align:right;"><div class="k">剩余预算</div><div class="v" id="enLeft">1700 <span style="font-size:14px;color:var(--soft);">kcal</span></div></div></div>
-        <div class="macros">
-          <div class="macros-row"><div class="lbl">蛋白质</div><div class="bar progress"><span id="enPB" style="width:0%"></span></div><div class="val" id="enPV">0/110g</div></div>
-          <div class="macros-row"><div class="lbl">碳水</div><div class="bar progress"><span id="enCB" style="width:0%"></span></div><div class="val" id="enCV">0/191g</div></div>
-          <div class="macros-row"><div class="lbl">脂肪</div><div class="bar progress"><span id="enFB" style="width:0%"></span></div><div class="val" id="enFV">0/55g</div></div>
+      <div class="grid2">
+        <div class="card">
+          <h3>今日能量 <span class="tag">估算填可在设置中调整</span></h3>
+          <div class="stat-row"><div><div class="k">已摄入</div><div class="v" id="enIn">0 <span style="font-size:14px;color:var(--soft);">kcal</span></div></div><div style="text-align:right;"><div class="k">剩余预算</div><div class="v" id="enLeft">1700 <span style="font-size:14px;color:var(--soft);">kcal</span></div></div></div>
+          <div class="macros">
+            <div class="macros-row"><div class="lbl">蛋白质</div><div class="bar progress"><span id="enPB" style="width:0%"></span></div><div class="val" id="enPV">0/110g</div></div>
+            <div class="macros-row"><div class="lbl">碳水</div><div class="bar progress"><span id="enCB" style="width:0%"></span></div><div class="val" id="enCV">0/191g</div></div>
+            <div class="macros-row"><div class="lbl">脂肪</div><div class="bar progress"><span id="enFB" style="width:0%"></span></div><div class="val" id="enFV">0/55g</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>今日饮水 <span class="tag">点击快速记录</span></h3>
+          <div style="display:flex;align-items:center;gap:14px;cursor:pointer;" onclick="openWaterModal()">
+            <div class="ring"><svg width="72" height="72" viewBox="0 0 72 72"><circle cx="36" cy="36" r="30" fill="none" stroke="#dfeaf6" stroke-width="8"/><circle id="waterArc" cx="36" cy="36" r="30" fill="none" stroke="#5aa9c9" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 999"/></svg><div class="lbl" id="waterPct">0%</div></div>
+            <div style="flex:1;"><div class="k">已喝</div><div class="v" id="waterNow">0 <span style="font-size:13px;color:var(--soft);">ml</span></div><div class="k" style="margin-top:6px;">目标</div><div class="v" id="waterGoal" style="font-size:13px;color:var(--ink);">2000 ml</div></div>
+          </div>
         </div>
       </div>
 
@@ -391,6 +400,15 @@
       <div class="card">
         <h3>历史记录</h3>
         <div id="weightList"></div>
+      </div>
+      <div class="card">
+        <h3>减重辅助</h3>
+        <div class="med-summary" id="wMedSummary" style="margin-bottom:10px;"></div>
+        <div class="btn-row"><button class="btn ghost sm" onclick="openMedModal()">用药设置</button></div>
+      </div>
+      <div class="card cream">
+        <h3>注射记录 <span class="tag" id="medCountTag">0 次</span></h3>
+        <div id="wMedList"></div>
       </div>
     </section>
 
@@ -711,11 +729,28 @@
     <div class="quick-grid">
       <button class="btn ghost" onclick="quickFromModal('weight')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:4px;"><path d="M12 3a6 6 0 0 0-6 6v9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V9a6 6 0 0 0-6-6z"/><path d="M9 9h6"/></svg><div>记录体重</div></button>
       <button class="btn ghost" onclick="quickFromModal('food')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:4px;"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.4"/></svg><div>添加食物</div></button>
-      <button class="btn ghost" onclick="quickFromModal('water')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:4px;"><path d="M12 2c-4 6-7 10-7 14a7 7 0 0 0 14 0c0-4-3-8-7-14z"/></svg><div>饮水 +250ml</div></button>
+      <button class="btn ghost" onclick="quickFromModal('water')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:4px;"><path d="M12 2c-4 6-7 10-7 14a7 7 0 0 0 14 0c0-4-3-8-7-14z"/></svg><div>记录饮水</div></button>
       <button class="btn ghost" onclick="quickFromModal('exercise')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:4px;"><path d="M6 4v16M18 4v16M2 9h4M2 15h4M18 9h4M18 15h4M6 12h12"/></svg><div>记录运动</div></button>
       <button class="btn ghost" onclick="quickFromModal('steps')" style="grid-column:1/-1;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:4px;"><path d="M13 4v4M5 16l4-4 3 3 5-5 2 2"/><circle cx="9" cy="20" r="1"/><circle cx="15" cy="14" r="1"/><circle cx="19" cy="10" r="1"/></svg><div>记录步数</div></button>
     </div>
     <div class="btn-row" style="margin-top:14px;"><button class="btn ghost sm" onclick="closeQuickModal()" style="flex:1;">关闭</button></div>
+  </div>
+</div>
+
+<!-- 记录饮水弹窗 -->
+<div class="modal-mask" id="waterModal">
+  <div class="modal">
+    <h3 style="margin:0 0 16px;">记录饮水</h3>
+    <p class="sub" id="waterToday" style="margin:0 0 12px;">今日已喝 0 ml</p>
+    <label>饮水量 (ml)</label>
+    <input type="number" id="waterAmount" min="1" step="50" inputmode="numeric" placeholder="如 250">
+    <div class="quick-amount" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+      <button class="btn ghost sm" onclick="setWaterAmount(150)">+150ml</button>
+      <button class="btn ghost sm" onclick="setWaterAmount(250)">+250ml</button>
+      <button class="btn ghost sm" onclick="setWaterAmount(350)">+350ml</button>
+      <button class="btn ghost sm" onclick="setWaterAmount(500)">+500ml</button>
+    </div>
+    <div class="btn-row" style="margin-top:18px;"><button class="btn ghost sm" onclick="closeWaterModal()">取消</button><button class="btn sm" onclick="saveWater()">保存</button></div>
   </div>
 </div>
 
@@ -1111,6 +1146,8 @@ function renderToday(){
   else{document.getElementById('planBody').className='empty';document.getElementById('planBody').textContent='今日还没有训练安排，休息也是计划的一部分。';}
   // 用药
   renderMed();
+  // 今日饮水
+  renderWaterCard();
 }
 
 /* 待办 */
@@ -1255,6 +1292,30 @@ function renderWeight(){
     header.onclick=()=>{body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
     box.appendChild(header);box.appendChild(body);
   });
+  // 减重辅助配置摘要
+  const m=s.med||{};
+  const ws=document.getElementById('wMedSummary');
+  if(ws){ws.innerHTML=`<div class="med-summary"><div class="cell"><div class="label">药物名称</div><div class="value">${m.drug||'未设置'}</div></div><div class="cell"><div class="label">单次剂量 MG</div><div class="value">${m.dose||'–'}</div></div></div>`;}
+  // 注射记录按月份折叠
+  const mlist=DB.load('med').slice().sort((a,b)=>a.date<b.date?1:-1);
+  const mt=document.getElementById('medCountTag');if(mt)mt.textContent=mlist.length+' 次';
+  const mbox=document.getElementById('wMedList');if(!mbox)return;mbox.innerHTML='';
+  if(!mlist.length){mbox.innerHTML='<div class="empty">还没有注射记录</div>';return;}
+  const mgroups={};mlist.forEach(r=>{const m=r.date.slice(0,7);mgroups[m]=mgroups[m]||[];mgroups[m].push(r);});
+  const mmonths=Object.keys(mgroups).sort((a,b)=>a<b?1:-1);
+  mmonths.forEach(m=>{
+    const list=mgroups[m];
+    const header=document.createElement('div');header.className='month-header';
+    header.innerHTML=`<div><b>${m.replace('-','年')}月</b> <span class="tag">${list.length} 次</span></div><span class="arrow">▼</span>`;
+    const body=document.createElement('div');body.className='month-body';
+    list.forEach(r=>{
+      const d=document.createElement('div');d.className='bubble';d.style.background='#fffdf2';
+      d.innerHTML=`<div class="b-top"><span class="b-tag">${r.drug||'注射'}</span><span class="b-time">${r.date}${r.shotNum?' · 第 '+r.shotNum+' 次':''}<button class="del" onclick="delMed('${r.id}')">删除</button></span></div><div class="b-body">${r.dose?r.dose+'mg · ':''}${r.note||''}</div>`;
+      body.appendChild(d);
+    });
+    header.onclick=()=>{body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
+    mbox.appendChild(header);mbox.appendChild(body);
+  });
 }
 document.querySelectorAll('#rangeTabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#rangeTabs button').forEach(x=>x.classList.remove('active'));
@@ -1297,19 +1358,42 @@ function quickFromModal(type){
   closeQuickModal();
   if(type==='weight'){openBodyModal();return;}
   if(type==='food'){openFoodModal();return;}
-  if(type==='water'){addWater250();return;}
+  if(type==='water'){openWaterModal();return;}
   if(type==='exercise'){go('exercise');return;}
   if(type==='steps'){openStepModal();return;}
 }
-function addWater250(){
+function openWaterModal(){
+  const cur=dayWater(today());
+  document.getElementById('waterToday').textContent='今日已喝 '+cur+' ml';
+  document.getElementById('waterAmount').value='';
+  document.getElementById('waterModal').classList.add('open');
+  setTimeout(()=>document.getElementById('waterAmount').focus(),0);
+}
+function closeWaterModal(){document.getElementById('waterModal').classList.remove('open');}
+function setWaterAmount(v){const inp=document.getElementById('waterAmount');inp.value=((parseFloat(inp.value)||0)+v);inp.focus();}
+function saveWater(){
+  const amount=parseInt(document.getElementById('waterAmount').value);
+  if(isNaN(amount)||amount<=0){toast('请输入有效饮水量');return;}
   const date=today();
   const list=DB.load('food');
   let rec=list.find(x=>x.date===date);
   if(!rec){rec={date,items:[],water:0,note:'',createdAt:nowISO()};list.push(rec);}
-  rec.water=(rec.water||0)+250;
+  rec.water=(rec.water||0)+amount;
   DB.save('food',list);
-  renderToday();renderFood();renderWeekly();
-  toast('已记录饮水 +250ml');
+  closeWaterModal();
+  renderToday();renderFood();renderWeekly();renderWeight();
+  toast('已记录饮水 +'+amount+'ml');
+}
+function renderWaterCard(){
+  const cur=dayWater(today());
+  const s=DB.obj('settings');
+  const goal=s.water||2000;
+  const pct=Math.min(100,Math.round(cur/goal*100));
+  const wn=document.getElementById('waterNow');if(wn)wn.innerHTML=cur+' <span style="font-size:13px;color:var(--soft);">ml</span>';
+  const wg=document.getElementById('waterGoal');if(wg)wg.textContent=goal+' ml';
+  const wp=document.getElementById('waterPct');if(wp)wp.textContent=pct+'%';
+  const wa=document.getElementById('waterArc');
+  if(wa){const dash=pct/100*188.5;wa.setAttribute('stroke-dasharray',dash+' 188.5');}
 }
 function openStepModal(){
   document.getElementById('stepDate').value=today();
@@ -2177,7 +2261,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v21';
+const KSPACE_VERSION='kspace-v22';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   navigator.serviceWorker.addEventListener('message',e=>{
