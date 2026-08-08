@@ -642,7 +642,7 @@
         <label>API Key</label><input type="password" id="aiKey" placeholder="sk-...">
         <label>模型</label><input type="text" id="aiModel" placeholder="openai/qwen/qwen-vl-plus">
         <p class="sub">Key 仅保存在本机浏览器，不会上传服务器。⚠️ OpenAI 官方端点不允许浏览器直连（会报跨域/CORS 错误），建议用 OpenRouter、自建代理或本地 Ollama。OpenRouter 一个 Key 可用多家模型，但 OpenAI/Anthropic/Google 模型在部分地区不可用；如遇 401/403 请换用 DeepSeek、Qwen 等模型。</p>
-        <div class="btn-row" style="margin-top:10px;"><button class="btn sm" onclick="saveSettings()">保存 AI 设置</button></div>
+        <div class="btn-row" style="margin-top:10px;"><button class="btn sm" onclick="saveSettings()">保存 AI 设置</button><button class="btn ghost sm" onclick="testAiConnection()">测试 AI 连接</button></div>
       </div>
       <div class="card">
         <h3>数据备份与导出 <span class="tag" id="backupStatus">尚未备份</span></h3>
@@ -983,6 +983,21 @@ function friendlyAiErr(e,status){
   if(status===404) return 'AI 失败：端点或模型不存在（404），检查 API 端点与模型名';
   if(status) return 'AI 失败：HTTP '+status;
   return 'AI 出错：'+(e&&e.message||'未知错误');
+}
+async function testAiConnection(){
+  const endpoint=document.getElementById('aiEndpoint').value.trim();
+  const key=document.getElementById('aiKey').value.trim();
+  const model=document.getElementById('aiModel').value.trim()||'qwen/qwen-vl-plus';
+  if(!endpoint||!key){toast('请先填写 API 端点和 Key');return;}
+  toast('正在测试 AI 连接…');
+  try{
+    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model,messages:[{role:'user',content:'Hi'}],max_tokens:60})});
+    if(!res.ok){toast(friendlyAiErr(null,res.status));return;}
+    const data=await res.json();
+    const reply=(data.choices?.[0]?.message?.content||'').trim();
+    const usedModel=data.model||model;
+    toast('AI 连接成功：'+usedModel+(reply?' · '+reply.slice(0,30):''));
+  }catch(e){toast(friendlyAiErr(e));}
 }
 function medContext(){
   const s=DB.obj('settings');const m=s.med||{};if(!m.drug)return '';
@@ -2253,7 +2268,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v26';
+const KSPACE_VERSION='kspace-v27';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
