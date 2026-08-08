@@ -973,16 +973,17 @@ function migrate(){
 function aiSettings(){return DB.obj('settings').ai||{};}
 function aiEnabled(){const s=aiSettings();return !!s.enable && s.endpoint && s.key;}
 /* 把 AI 请求的错误翻译成人话（重点提示 CORS / 地区限制） */
-function friendlyAiErr(e,status){
+function friendlyAiErr(e,status,detail){
   const m=(e&&e.message||'').toLowerCase();
+  const d=detail?('：'+detail):'';
   if(m.includes('failed to fetch')||m.includes('networkerror')||m.includes('load failed')||m.includes('type error'))
-    return 'AI 请求失败：多为跨域(CORS)或网络问题。OpenAI 官方端点不允许浏览器直连，请把 API 端点改为 OpenRouter（https://openrouter.ai/api/v1/chat/completions）或自建代理后重试';
-  if(status===401) return 'AI 失败：Key 无效、无权限或所选模型在你所在地区不可用（401）。请检查 API Key，并在 OpenRouter 控制台确认该模型可调用';
-  if(status===403) return 'AI 失败：所选模型在你所在地区不可用（403）。建议换成 DeepSeek/Qwen 等可用模型';
-  if(status===429) return 'AI 失败：请求频繁或额度用完（429），稍后再试';
-  if(status===404) return 'AI 失败：端点或模型不存在（404），检查 API 端点与模型名';
-  if(status) return 'AI 失败：HTTP '+status;
-  return 'AI 出错：'+(e&&e.message||'未知错误');
+    return 'AI 请求失败：多为跨域(CORS)或网络问题。OpenAI 官方端点不允许浏览器直连，请把 API 端点改为 OpenRouter（https://openrouter.ai/api/v1/chat/completions）或自建代理后重试'+d;
+  if(status===401) return 'AI 失败：Key 无效、无权限或所选模型在你所在地区不可用（401）。请检查 API Key，并在 OpenRouter 控制台确认该模型可调用'+d;
+  if(status===403) return 'AI 失败：所选模型在你所在地区不可用（403）。建议换成 DeepSeek/Qwen 等可用模型'+d;
+  if(status===429) return 'AI 失败：请求频繁或额度用完（429），稍后再试'+d;
+  if(status===404) return 'AI 失败：端点或模型不存在（404），检查 API 端点与模型名'+d;
+  if(status) return 'AI 失败：HTTP '+status+d;
+  return 'AI 出错：'+(e&&e.message||'未知错误')+d;
 }
 async function testAiConnection(){
   const endpoint=document.getElementById('aiEndpoint').value.trim();
@@ -992,7 +993,11 @@ async function testAiConnection(){
   toast('正在测试 AI 连接…');
   try{
     const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model,messages:[{role:'user',content:'Hi'}],max_tokens:60})});
-    if(!res.ok){toast(friendlyAiErr(null,res.status));return;}
+    if(!res.ok){
+      let detail='';
+      try{const err=await res.clone().json();detail=(err.error&&err.error.message)||err.message||JSON.stringify(err).slice(0,120);}catch(_){try{detail=await res.text();}catch(__){}}
+      toast(friendlyAiErr(null,res.status,detail));return;
+    }
     const data=await res.json();
     const reply=(data.choices?.[0]?.message?.content||'').trim();
     const usedModel=data.model||model;
@@ -1034,7 +1039,11 @@ async function aiAnalyze(type,text,photos){
   photos.forEach(p=>content.push({type:'image_url',image_url:{url:p}}));
   try{
     const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model:s.model||'qwen/qwen-vl-plus',messages:[{role:'system',content:system},{role:'user',content}],max_tokens:800})});
-    if(!res.ok){toast(friendlyAiErr(null,res.status));return null;}
+    if(!res.ok){
+      let detail='';
+      try{const err=await res.clone().json();detail=(err.error&&err.error.message)||err.message||JSON.stringify(err).slice(0,120);}catch(_){try{detail=await res.text();}catch(__){}}
+      toast(friendlyAiErr(null,res.status,detail));return null;
+    }
     const data=await res.json();
     const txt=data.choices?.[0]?.message?.content||'';
     return JSON.parse(txt.replace(/```json|```/g,'').trim());
@@ -2169,7 +2178,11 @@ async function aiCalcTargets(){
   const btn=document.getElementById('aiCalcBtn');btn.disabled=true;btn.textContent='计算中…';
   try{
     const res=await fetch(aiSettings().endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+aiSettings().key},body:JSON.stringify({model:aiSettings().model||'qwen/qwen-vl-plus',messages:[{role:'system',content:sys},{role:'user',content:userText}],max_tokens:300})});
-    if(!res.ok){toast(friendlyAiErr(null,res.status));return;}
+    if(!res.ok){
+      let detail='';
+      try{const err=await res.clone().json();detail=(err.error&&err.error.message)||err.message||JSON.stringify(err).slice(0,120);}catch(_){try{detail=await res.text();}catch(__){}}
+      toast(friendlyAiErr(null,res.status,detail));return;
+    }
     const data=await res.json();const txt=data.choices?.[0]?.message?.content||'';
     const r=JSON.parse(txt.replace(/```json|```/g,'').trim());
     if(r.kcal)document.getElementById('setKcal').value=r.kcal;
@@ -2268,7 +2281,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v27';
+const KSPACE_VERSION='kspace-v28';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
