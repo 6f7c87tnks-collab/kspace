@@ -5,7 +5,7 @@
  */
 const Cloud=(function(){
   const LS_CFG='kspace_cloud', LS_SESS='kspace_session';
-  const TABLES=['weight','food','exercise','period','todo','journal','supp','med','steps'];
+  const TABLES=['weight','food','exercise','period','todo','journal','supp','med','steps','girth','bust'];
 
   function cfg(){try{return JSON.parse(localStorage.getItem(LS_CFG)||'null')}catch(e){return null}}
   function sess(){try{return JSON.parse(localStorage.getItem(LS_SESS)||'null')}catch(e){return null}}
@@ -82,7 +82,10 @@ const Cloud=(function(){
     const u=user(); if(!u)return;
     for(const t of TABLES){
       const r=await fetch(rest(t)+'?select=*&user_id=eq.'+encodeURIComponent(u.id),{headers:headers()});
-      if(!r.ok)throw new Error('拉取 '+t+' 失败: '+(await r.text()).slice(0,80));
+      if(!r.ok){
+        if(r.status===401)throw new Error('登录已过期，请到「设置与备份」退出云端后重新登录');
+        throw new Error('拉取 '+t+' 失败: '+(await r.text()).slice(0,80));
+      }
       const rows=await r.json();
       localStorage.setItem('kspace_'+t,JSON.stringify(rows.map(x=>x.data)));
     }

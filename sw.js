@@ -1,4 +1,4 @@
-const CACHE = 'kspace-v15';
+const CACHE = 'kspace-v16';
 const ASSETS = ['./','./index.html','./supabase-sync.js','./manifest.webmanifest','./icon.svg','./touch-icon.svg','./icon-512.png'];
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(()=>{})); });
 self.addEventListener('activate', e => {

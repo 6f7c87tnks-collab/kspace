@@ -966,7 +966,7 @@ function renderView(v){
 }
 
 /* ============ 工具 ============ */
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
+function toast(msg){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
 let askCb=null;
 function askKey(e){if(e.key==='Enter'){e.preventDefault();closeAsk();askCb&&askCb();askCb=null;}else if(e.key==='Escape'){closeAsk();askCb=null;}}
 function ask(msg,onYes){askCb=onYes;document.getElementById('askMsg').textContent=msg;document.getElementById('askYes').onclick=()=>{closeAsk();askCb&&askCb();askCb=null;};document.getElementById('askModal').classList.add('open');setTimeout(()=>document.getElementById('askYes').focus(),0);document.addEventListener('keydown',askKey);}
@@ -1990,7 +1990,7 @@ function drawTrend(canvas,recs,combined){
 
 /* ============ 导航 ============ */
 let currentView='today';
-function go(v){currentView=v;document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));document.getElementById('pageTitle').textContent=TITLES[v];if(window.innerWidth<900)document.body.classList.remove('nav-open');window.scrollTo(0,0);renderView(v);}
+function go(v){currentView=v;const sec=document.getElementById('view-'+v);if(!sec)return;document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));sec.classList.add('active');document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));const pt=document.getElementById('pageTitle');if(pt)pt.textContent=TITLES[v]||v;if(window.innerWidth<900)document.body.classList.remove('nav-open');window.scrollTo(0,0);renderView(v);}
 document.getElementById('navToggle').onclick=()=>document.body.classList.toggle('nav-open');
 document.getElementById('mask').onclick=()=>document.body.classList.remove('nav-open');
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>go(b.dataset.view));
@@ -2008,8 +2008,10 @@ attachWheel(document.getElementById('wheelDay'));
 const d=new Date();calYear=d.getFullYear();calMonth=d.getMonth();
 updateFooter();
 if(Cloud.on()){
-  // 有登录态：先刷新令牌并拉取云端数据，失败则退回本地缓存
-  Cloud.refresh().then(()=>Cloud.pull()).catch(()=>{}).finally(()=>{go('today');});
+  // 有登录态：先刷新令牌并拉取云端数据，失败则退回本地缓存（本地数据始终可用）
+  Cloud.refresh().then(()=>Cloud.pull())
+    .then(()=>{go('today');})
+    .catch(e=>{ toast('云端同步未成功：'+(e&&e.message?e.message.slice(0,30):'网络异常')+'（已使用本地数据）'); go('today'); });
 }else{
   go('today');
 }
