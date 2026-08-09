@@ -640,7 +640,7 @@
         <label class="chk"><input type="checkbox" id="aiEnable"> 启用 AI 自动解析照片</label>
         <label>API 端点</label><input type="text" id="aiEndpoint" placeholder="https://openrouter.ai/api/v1/chat/completions">
         <label>API Key</label><input type="password" id="aiKey" placeholder="sk-...">
-        <label>模型</label><input type="text" id="aiModel" placeholder="openai/qwen/qwen-vl-plus">
+        <label>模型</label><input type="text" id="aiModel" placeholder="openai/qwen/qwen3.8-max">
         <p class="sub">Key 仅保存在本机浏览器，不会上传服务器。⚠️ OpenAI 官方端点不允许浏览器直连（会报跨域/CORS 错误），建议用 OpenRouter、自建代理或本地 Ollama。OpenRouter 一个 Key 可用多家模型，但 OpenAI/Anthropic/Google 模型在部分地区不可用；如遇 401/403 请换用 DeepSeek、Qwen 等模型。</p>
         <div class="btn-row" style="margin-top:10px;"><button class="btn sm" onclick="saveSettings()">保存 AI 设置</button><button class="btn ghost sm" onclick="testAiConnection()">测试 AI 连接</button></div>
       </div>
@@ -985,10 +985,20 @@ function friendlyAiErr(e,status,detail){
   if(status) return 'AI 失败：HTTP '+status+d;
   return 'AI 出错：'+(e&&e.message||'未知错误')+d;
 }
+/* 从 AI 返回文本中安全提取 JSON */
+function safeJsonParse(txt){
+  const raw=(txt||'').trim();
+  if(!raw) throw new Error('AI 返回为空，可能该模型不支持图片识别或请求被拦截');
+  const cleaned=raw.replace(/```json|```/g,'').trim();
+  try{ return JSON.parse(cleaned); }catch(_){}
+  const m=cleaned.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if(m){ try{ return JSON.parse(m[1]); }catch(_){} }
+  throw new Error('AI 返回不是 JSON：'+raw.slice(0,120));
+}
 async function testAiConnection(){
   const endpoint=document.getElementById('aiEndpoint').value.trim();
   const key=document.getElementById('aiKey').value.trim();
-  const model=document.getElementById('aiModel').value.trim()||'qwen/qwen-vl-plus';
+  const model=document.getElementById('aiModel').value.trim()||'qwen/qwen3.8-max';
   if(!endpoint||!key){toast('请先填写 API 端点和 Key');return;}
   toast('正在测试 AI 连接…');
   try{
@@ -1038,7 +1048,7 @@ async function aiAnalyze(type,text,photos){
   const content=[{type:'text',text:userText}];
   photos.forEach(p=>content.push({type:'image_url',image_url:{url:p}}));
   try{
-    const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model:s.model||'qwen/qwen-vl-plus',messages:[{role:'system',content:system},{role:'user',content}],max_tokens:800})});
+    const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model:s.model||'qwen/qwen3.8-max',messages:[{role:'system',content:system},{role:'user',content}],max_tokens:800})});
     if(!res.ok){
       let detail='';
       try{const err=await res.clone().json();detail=(err.error&&err.error.message)||err.message||JSON.stringify(err).slice(0,120);}catch(_){try{detail=await res.text();}catch(__){}}
@@ -1046,7 +1056,8 @@ async function aiAnalyze(type,text,photos){
     }
     const data=await res.json();
     const txt=data.choices?.[0]?.message?.content||'';
-    return JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if(!txt.trim()){ toast('AI 返回为空，可能该模型不支持图片识别或图片过大'); return null; }
+    return safeJsonParse(txt);
   }catch(e){toast(friendlyAiErr(e));return null;}
 }
 
@@ -2040,7 +2051,7 @@ function renderSettings(){
   document.getElementById('aiEnable').checked=!!ai.enable;
   document.getElementById('aiEndpoint').value=ai.endpoint||'';
   document.getElementById('aiKey').value=ai.key||'';
-  document.getElementById('aiModel').value=ai.model||'qwen/qwen-vl-plus';
+  document.getElementById('aiModel').value=ai.model||'qwen/qwen3.8-max';
   // 估算
   const ws=DB.load('weight');const cur=ws.length?ws[ws.length-1].weight:(s.startW||60);
   const h=s.height||165;const age=s.age||30;const g=s.gender||'female';
@@ -2164,7 +2175,7 @@ function saveSettings(){
     enable:document.getElementById('aiEnable').checked,
     endpoint:document.getElementById('aiEndpoint').value.trim(),
     key:document.getElementById('aiKey').value.trim(),
-    model:document.getElementById('aiModel').value.trim()||'qwen/qwen-vl-plus'
+    model:document.getElementById('aiModel').value.trim()||'qwen/qwen3.8-max'
   };
   DB.saveObj('settings',s);toast('已保存');renderToday();renderWeight();renderFood();renderWeekly();
 }
@@ -2177,14 +2188,15 @@ async function aiCalcTargets(){
   const userText='Profile: '+JSON.stringify(profile);
   const btn=document.getElementById('aiCalcBtn');btn.disabled=true;btn.textContent='计算中…';
   try{
-    const res=await fetch(aiSettings().endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+aiSettings().key},body:JSON.stringify({model:aiSettings().model||'qwen/qwen-vl-plus',messages:[{role:'system',content:sys},{role:'user',content:userText}],max_tokens:300})});
+    const res=await fetch(aiSettings().endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+aiSettings().key},body:JSON.stringify({model:aiSettings().model||'qwen/qwen3.8-max',messages:[{role:'system',content:sys},{role:'user',content:userText}],max_tokens:300})});
     if(!res.ok){
       let detail='';
       try{const err=await res.clone().json();detail=(err.error&&err.error.message)||err.message||JSON.stringify(err).slice(0,120);}catch(_){try{detail=await res.text();}catch(__){}}
       toast(friendlyAiErr(null,res.status,detail));return;
     }
     const data=await res.json();const txt=data.choices?.[0]?.message?.content||'';
-    const r=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if(!txt.trim()){ toast('AI 返回为空'); return; }
+    const r=safeJsonParse(txt);
     if(r.kcal)document.getElementById('setKcal').value=r.kcal;
     if(r.protein)document.getElementById('setP').value=r.protein;
     if(r.carb)document.getElementById('setC').value=r.carb;
@@ -2281,7 +2293,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v28';
+const KSPACE_VERSION='kspace-v29';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
