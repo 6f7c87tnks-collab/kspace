@@ -74,6 +74,8 @@
   /* buttons */
   button{font-family:inherit;cursor:pointer;border:none;border-radius:12px;font-size:15px;}
   .btn{background:var(--green);color:#fff;padding:12px 18px;min-height:46px;font-weight:600;}
+.chip{background:#fff;border:1px solid var(--line);color:var(--ink);padding:9px 15px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;min-height:42px;}
+.chip:active{background:var(--green);color:#fff;border-color:var(--green);}
   .btn.peach{background:var(--peach-d);}
   .btn.yellow{background:var(--yellow-d);}
   .btn.ghost{background:#fff;color:var(--green-d);border:1px solid var(--line);}
@@ -309,11 +311,23 @@
       </div>
 
       <div class="card">
-        <h3>待办</h3>
+        <h3>待办 <span class="tag">可传照片/速记</span></h3>
         <div class="composer" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <button class="mic-btn" id="micBtn" onclick="toggleMic()" aria-label="语音输入"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
-          <input type="text" id="todoInput" placeholder="输入或语音添加待办，回车保存" style="flex:1;">
+          <input type="text" id="todoInput" placeholder="待办，或『体重65.2 体脂28.5』『水500』『步数8000』『吃 米饭300千卡』" style="flex:1;min-width:0;" onkeydown="if(event.key==='Enter')addTodo()">
           <button class="btn sm" onclick="addTodo()">添加</button>
+          <button class="btn sm ghost" title="上传照片自动解析" onclick="document.getElementById('todoPhoto').click()">📷</button>
+          <input type="file" id="todoPhoto" accept="image/*" style="display:none;" onchange="onTodoPhoto(this)">
+        </div>
+        <div id="todoPhotoBar" style="display:none;margin-top:8px;padding:10px;background:#fffdf2;border-radius:10px;">
+          <div style="font-size:13px;color:var(--soft);margin-bottom:6px;">这张照片主要是？（选错可换一个类型）</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="chip" onclick="todoAnalyze('weight')">体脂秤</button>
+            <button class="chip" onclick="todoAnalyze('food')">食物</button>
+            <button class="chip" onclick="todoAnalyze('exercise')">运动</button>
+            <button class="chip" onclick="todoAnalyze('general')">饮水/综合</button>
+          </div>
+          <div id="todoPhotoStatus" style="font-size:13px;color:var(--soft);margin-top:6px;"></div>
         </div>
         <div id="todoList" class="feed" style="margin-top:10px;"></div>
       </div>
@@ -1092,6 +1106,9 @@ async function aiAnalyze(type,text,photos){
   }else if(type==='supp'){
     system='You are a supplement assistant. Analyze supplements in images/text. Return ONLY a JSON: {"items":[{"name":"string","dose":"string","note":"string"}],"note":"string"}. No markdown.';
     if(!userText)userText='请分析照片中的营养剂。';
+  }else if(type==='general'){
+    system='Analyze the image for ANY health tracking data. Return ONLY a JSON: {"weight":number|null,"fat":number|null,"food":[{"name":string,"kcal":number}],"waterMl":number|null,"exercise":{"act":string,"minutes":number,"kcal":number}|null,"note":string}. No markdown.';
+    userText='请提取照片中的健康数据（体重、体脂、食物、饮水量、运动等）。';
   }
   const content=[{type:'text',text:userText}];
   photos.forEach(p=>content.push({type:'image_url',image_url:{url:p}}));
@@ -1238,10 +1255,115 @@ function renderTodo(){
 }
 function addTodo(){
   const inp=document.getElementById('todoInput');const t=inp.value.trim();if(!t){toast('写点什么吧');return;}
-  DB.add('todo',{text:t,done:false,pin:false});inp.value='';renderTodo();toast('已添加');
+  const n=parseHealthNote(t);
+  if(n.weight!=null||n.fat!=null||n.steps!=null||n.water!=null||n.food||n.exercise){
+    const parts=[];
+    if(n.weight!=null){addWeightRecord(n.weight,n.fat);parts.push('体重'+n.weight+'kg');}
+    if(n.steps!=null){addStepRecord(n.steps);parts.push('步数'+n.steps);}
+    if(n.water!=null){addWaterRecord(n.water);parts.push('饮水'+n.water+'ml');}
+    if(n.food){const items=parseFood(n.food);if(items.length){addFoodItems(items,[]);parts.push(items.length+'项食物');}}
+    if(n.exercise){const p=parseEx(n.exercise);DB.add('exercise',{date:today(),text:n.exercise,...p,photos:[],createdAt:nowISO()});renderExercise();renderToday();parts.push('运动'+p.act);}
+    if(parts.length){inp.value='';toast('已记录：'+parts.join('、'));return;}
+  }
+  DB.add('todo',{text:t,done:false,pin:false});inp.value='';renderTodo();toast('已添加待办');
 }
 function toggleTodo(id){const a=DB.load('todo');const i=a.findIndex(x=>x.id===id);if(i>=0){a[i].done=!a[i].done;DB.save('todo',a);}renderTodo();}
 function delTodo(id){DB.del('todo',id);renderTodo();}
+
+/* 任务框照片与速记解析 */
+let todoPhotoData=null;
+function onTodoPhoto(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  compressImg(f,1000,data=>{
+    todoPhotoData=data;
+    document.getElementById('todoPhotoBar').style.display='block';
+    const st=document.getElementById('todoPhotoStatus');st.textContent='已选照片，请选择类型（选错可换一个）';st.style.color='var(--soft)';
+  });
+  input.value='';
+}
+async function todoAnalyze(type){
+  if(!todoPhotoData){toast('请先选择照片');return;}
+  if(!aiEnabled()){toast('请先在设置里填写 AI 端点与 Key');return;}
+  const st=document.getElementById('todoPhotoStatus');st.textContent='AI 解析中…';st.style.color='var(--soft)';
+  let ok=false,msg='';
+  try{
+    if(type==='weight'){
+      const r=await aiAnalyze('weight','',[todoPhotoData]);
+      if(r&&r.weight!=null){ok=addWeightRecord(r.weight,r.fat);msg='体重 '+r.weight+'kg'+(r.fat!=null?(' 体脂'+r.fat+'%'):'');}
+    }else if(type==='food'){
+      const r=await aiAnalyze('food','',[todoPhotoData]);
+      if(r&&r.items&&r.items.length){ok=addFoodItems(r.items,[todoPhotoData]);msg=r.items.length+' 项食物';}
+    }else if(type==='exercise'){
+      const r=await aiAnalyze('exercise','',[todoPhotoData]);
+      if(r&&r.act){ok=addExerciseRecord(r.act,r.minutes,r.kcal);msg=r.act+' '+r.minutes+'分钟';}
+    }else if(type==='general'){
+      const r=await aiAnalyze('general','',[todoPhotoData]);
+      if(r){
+        const parts=[];
+        if(r.weight!=null){addWeightRecord(r.weight,r.fat);parts.push('体重'+r.weight+'kg');}
+        if(r.food&&r.food.length){addFoodItems(r.food,[]);parts.push(r.food.length+'项食物');}
+        if(r.waterMl){addWaterRecord(r.waterMl);parts.push('饮水'+r.waterMl+'ml');}
+        if(r.exercise&&r.exercise.act){addExerciseRecord(r.exercise.act,r.exercise.minutes,r.exercise.kcal);parts.push('运动'+r.exercise.act);}
+        ok=parts.length>0;msg=parts.join('、')||'未识别到健康数据';
+      }
+    }
+  }catch(e){ok=false;msg='解析出错';}
+  if(ok){st.textContent='✓ 已记录：'+msg;st.style.color='var(--green)';toast('已记录：'+msg);setTimeout(()=>{document.getElementById('todoPhotoBar').style.display='none';},2400);}
+  else{st.textContent='✗ '+msg+'，可换一个类型，或用 WorkBuddy 识别后粘贴文字';st.style.color='#e74c3c';}
+}
+function addWeightRecord(w,fat){
+  if(isNaN(w)||w<=0){toast('未识别到有效体重');return false;}
+  const date=today();
+  const list=DB.load('weight');
+  const idx=list.findIndex(x=>x.date===date);
+  const rec={date,weight:w,fat:(fat!=null&&!isNaN(fat))?fat:null,photos:[],createdAt:nowISO()};
+  if(idx>=0)list[idx]=rec;else list.push(rec);
+  DB.save('weight',list);renderToday();renderWeight();renderWeekly();
+  return true;
+}
+function addFoodItems(items,photos){
+  if(!items||!items.length){toast('未识别到食物');return false;}
+  items=items.map(i=>({text:i.name,food:i.name,grams:i.grams||0,kcal:Number(i.kcal)||0,p:Number(i.p)||0,c:Number(i.c)||0,f:Number(i.f)||0}));
+  const kcal=items.reduce((a,b)=>a+b.kcal,0);
+  DB.add('food',{date:today(),meal:'snack',text:'(照片记录)',items,photos:photos||[],kcal,water:0,createdAt:nowISO()});
+  renderFood();renderToday();
+  return true;
+}
+function addExerciseRecord(act,min,kcal){
+  if(!act){toast('未识别到运动');return false;}
+  DB.add('exercise',{date:today(),text:act,act,min:Number(min)||0,kcal:Number(kcal)||0,photos:[],createdAt:nowISO()});
+  renderExercise();renderToday();
+  return true;
+}
+function addWaterRecord(ml){
+  if(!ml||ml<=0){toast('未识别到饮水量');return false;}
+  const date=today();
+  const list=DB.load('food');
+  let rec=list.find(x=>x.date===date);
+  if(!rec){rec={date,items:[],water:0,note:'',createdAt:nowISO()};list.push(rec);}
+  rec.water=(rec.water||0)+ml;DB.save('food',list);
+  renderToday();renderFood();renderWeekly();renderWeight();
+  return true;
+}
+function addStepRecord(n){
+  if(!n||n<=0){toast('未识别到步数');return false;}
+  const date=today();
+  const arr=DB.load('steps');const i=arr.findIndex(x=>x.date===date);
+  if(i>=0){arr[i]={...arr[i],count:(arr[i].count||0)+n};DB.save('steps',arr);}else{DB.add('steps',{date,count:n,createdAt:nowISO()});}
+  renderSteps();renderToday();renderWeekly();
+  return true;
+}
+function parseHealthNote(t){
+  t=t.replace(/\s+/g,'');
+  const o={};
+  let m=t.match(/体重?(\d+(\.\d+)?)/);if(m)o.weight=parseFloat(m[1]);
+  m=t.match(/体脂(\d+(\.\d+)?)/);if(m)o.fat=parseFloat(m[1]);
+  m=t.match(/步数?(\d+)/);if(m)o.steps=parseInt(m[1]);
+  m=t.match(/水(\d+)(ml|毫升)?/);if(m)o.water=parseInt(m[1]);
+  m=t.match(/吃(.+)/)||t.match(/食物(.+)/);if(m)o.food=m[1];
+  m=t.match(/运动(.+)/)||t.match(/锻炼(.+)/);if(m)o.exercise=m[1];
+  return o;
+}
 
 /* 用药记录 / 减重辅助 */
 function renderMed(){
@@ -2433,7 +2555,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v35';
+const KSPACE_VERSION='kspace-v36';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
