@@ -86,6 +86,14 @@
   label{display:block;font-size:13px;color:var(--soft);margin:10px 0 4px;}
   input[type="text"],input[type="number"],input[type="password"],input[type="date"],select,textarea{width:100%;font-size:16px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-family:inherit;}
   input:focus,textarea:focus{outline:none;border-color:var(--green);}
+  /* 设置页：输入框占满单元格并可收缩，避免日期框溢出容器 */
+  #view-settings .row>div,#view-settings .grid2>div{min-width:0;}
+  #view-settings input[type="text"],#view-settings input[type="number"],#view-settings input[type="password"],#view-settings input[type="date"],#view-settings select,#view-settings textarea{width:100%;box-sizing:border-box;}
+  details.card>summary{cursor:pointer;font-weight:700;font-size:16px;list-style:none;outline:none;display:block;}
+  details.card>summary::-webkit-details-marker{display:none;}
+  details.card>summary:before{content:"▸ ";color:var(--soft);}
+  details.card[open]>summary{margin-bottom:10px;}
+  details.card[open]>summary:before{content:"▾ ";}
   .chk{display:flex;align-items:center;gap:8px;margin:10px 0;}
   .chk input{width:auto;margin:0;}
   .toggle{position:relative;display:inline-block;width:44px;height:24px;}
@@ -451,8 +459,8 @@
         <h3>记录步数 <button class="icon-btn" style="margin-left:auto;width:30px;height:30px;border-radius:8px;" onclick="addStepFromPage()" aria-label="保存步数"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></button></h3>
         <p class="sub">从 RingConn App 读数后填入，本周复盘会计算平均步数。</p>
         <div class="row" style="align-items:flex-end;">
-          <div style="flex:0 0 150px;max-width:45%;"><label>日期</label><input type="date" id="stepDate" style="width:100%;box-sizing:border-box;"></div>
-          <div style="flex:1;min-width:140px;"><label>步数</label><input type="number" id="stepCount" placeholder="如 8200" style="width:100%;box-sizing:border-box;"></div>
+          <div style="flex:1 1 130px;min-width:0;"><label>日期</label><input type="date" id="stepDate" style="width:100%;box-sizing:border-box;"></div>
+          <div style="flex:2 1 140px;min-width:0;"><label>步数</label><input type="number" id="stepCount" placeholder="如 8200" style="width:100%;box-sizing:border-box;"></div>
         </div>
         <div id="stepList" style="margin-top:12px;"></div>
       </div>
@@ -578,43 +586,31 @@
     <!-- 设置与备份 -->
     <section class="view" id="view-settings">
       <div class="card">
-        <h3>基础与目标 <span class="tag">所有估算均与手动调整</span></h3>
-        <div class="row">
-          <div><label>性别（BMR 公式）</label><select id="setGender"><option value="female">女</option><option value="male">男</option></select></div>
-          <div><label>每周运动次数</label><input type="number" id="setActivityCount" min="0" max="14" placeholder="如 4"></div>
-          <div><label>你的昵称</label><input type="text" id="setNick"></div>
-        </div>
-        <div class="row">
-          <div><label>身高 CM</label><input type="number" id="setHeight"></div>
-          <div><label>起始体重 KG</label><input type="number" id="setStartW" step="0.1"></div>
-          <div><label>目标体重 KG</label><input type="number" id="setTargetW" step="0.1"></div>
-        </div>
-        <div class="row">
-          <div><label>年龄</label><input type="number" id="setAge"></div>
-          <div><label>目标日期</label><input type="date" id="setTargetDate"></div>
-          <div><label>热量目标 KCAL</label><input type="number" id="setKcal"></div>
-        </div>
-        <div class="row">
-          <div><label>蛋白质目标 G</label><input type="number" id="setP"></div>
-          <div><label>碳水目标 G</label><input type="number" id="setC"></div>
-          <div><label>脂肪目标 G</label><input type="number" id="setF"></div>
-        </div>
-        <div class="row">
-          <div><label>步数目标</label><input type="number" id="setSteps"></div>
-          <div><label>饮水目标 ML</label><input type="number" id="setWater"></div>
-          <div><label>每周训练天数</label><input type="number" id="setWkTrain"></div>
-        </div>
-        <div class="btn-row" style="margin-top:14px;"><button class="btn peach sm" onclick="aiCalcTargets()" id="aiCalcBtn">AI 计算目标</button><button class="btn sm" onclick="saveSettings()">保存设置</button></div>
-      </div>
-      <div class="card">
-        <h3>能量估算 <span class="tag">Mifflin–St Jeor</span></h3>
+        <h3>我的目标 <span class="tag">改动自动保存</span></h3>
         <div class="grid2">
-          <div class="stat"><div class="v" id="estBMI">–</div><div class="k">BMI</div></div>
-          <div class="stat"><div class="v" id="estBMR">–</div><div class="k">基础代谢 BMR (kcal)</div></div>
-          <div class="stat"><div class="v" id="estTDEE">–</div><div class="k">日消耗 TDEE (kcal)</div></div>
+          <div><label>昵称</label><input type="text" id="setNick" onchange="saveSettings()"></div>
+          <div><label>年龄</label><input type="number" id="setAge" onchange="saveSettings()"></div>
+          <div><label>身高 CM</label><input type="number" id="setHeight" onchange="saveSettings()"></div>
+          <div><label>起始体重 KG</label><input type="number" id="setStartW" step="0.1" onchange="saveSettings()"></div>
+          <div><label>目标体重 KG</label><input type="number" id="setTargetW" step="0.1" onchange="saveSettings()"></div>
+          <div><label>目标日期</label><input type="date" id="setTargetDate" onchange="saveSettings()"></div>
+          <div><label>热量目标 KCAL</label><input type="number" id="setKcal" onchange="saveSettings()"></div>
+          <div><label>蛋白质目标 G</label><input type="number" id="setP" onchange="saveSettings()"></div>
+          <div><label>碳水目标 G</label><input type="number" id="setC" onchange="saveSettings()"></div>
+          <div><label>饮水目标 ML</label><input type="number" id="setWater" onchange="saveSettings()"></div>
         </div>
-        <p class="sub">男性 BMR = 10×体重 + 6.25×身高 - 5×年龄 + 5；女性常数 = -161。TDEE = BMR × 活动系数。</p>
+        <p class="sub" style="margin:10px 0 0;">填完即自动保存，无需点按钮；目标会同步到「今日速览」。</p>
       </div>
+      <details class="card settings-extra">
+        <summary>其他参数（可选）</summary>
+        <div class="grid2">
+          <div><label>性别（估算用）</label><select id="setGender"><option value="female">女</option><option value="male">男</option></select></div>
+          <div><label>每周运动次数</label><input type="number" id="setActivityCount" min="0" max="14" placeholder="如 4" onchange="saveSettings()"></div>
+          <div><label>脂肪目标 G</label><input type="number" id="setF" onchange="saveSettings()"></div>
+          <div><label>步数目标</label><input type="number" id="setSteps" onchange="saveSettings()"></div>
+          <div><label>每周训练天数</label><input type="number" id="setWkTrain" onchange="saveSettings()"></div>
+        </div>
+      </details>
       <div class="card">
         <h3>用药与减重辅助 <span class="tag">替尔泊肽等</span></h3>
         <p class="sub">记录后，AI 在分析饮食/运动时会把这个条件纳入建议（如蛋白摄入、胃肠道反应、低血糖风险等）。</p>
@@ -1175,8 +1171,6 @@ function compressImg(file,maxW,cb){const reader=new FileReader();reader.onload=(
 
 /* ============ 今日速览 ============ */
 function renderToday(){
-  const todayView=document.getElementById('view-today');
-  if(!todayView||!todayView.classList.contains('active')) return;
   const s=DB.obj('settings');const nick=s.nick||'K';
   const h=new Date().getHours();const greet=h<11?'早上好':h<13?'中午好':h<18?'下午好':'晚上好';
   document.getElementById('heroGreet').innerHTML=`${greet} · <span>${nick}</span>`;
@@ -1267,7 +1261,7 @@ function renderMed(){
     feed.appendChild(d);
   });
 }
-function delMed(id){DB.del('med',id);renderMed();renderToday();}
+function delMed(id){DB.del('med',id);renderMed();renderWeight();renderToday();}
 function quickMed(){
   const s=DB.obj('settings');const m=s.med||{};
   const md=document.getElementById('medDate');
@@ -1324,6 +1318,7 @@ function toggleMic(){
 
 /* ============ 体重记录 ============ */
 let weightRange='30';
+const openGroups=new Set(); // 记录哪些月份分组处于展开状态，删除后保持不折叠
 let bodyModalPhotos=[];
 function renderWeight(){
   const w=DB.load('weight').slice().sort((a,b)=>a.date<b.date?-1:1);
@@ -1356,20 +1351,20 @@ function renderWeight(){
   const groups={};w.forEach(r=>{const m=r.date.slice(0,7);groups[m]=groups[m]||[];groups[m].push(r);});
   const months=Object.keys(groups).sort((a,b)=>a<b?1:-1);
   if(!months.length){box.innerHTML='<div class="empty">还没有体重记录</div>';return;}
-  months.forEach(m=>{
-    const list=groups[m];
-    const header=document.createElement('div');header.className='month-header';
-    header.innerHTML=`<div><b>${m.replace('-','年')}月</b> <span class="tag">${list.length} 条</span></div><span class="arrow">▼</span>`;
-    const body=document.createElement('div');body.className='month-body';
-    list.slice().sort((a,b)=>a.date<b.date?1:-1).forEach(r=>{
-      const d=document.createElement('div');d.className='bubble';
-      const imgs=thumbHtml(r.photos||[],'thumbs');
-      d.innerHTML=`<div class="b-top"><span class="b-tag">体重</span><span class="b-time">${r.date}<button class="del" onclick="delRec('weight','${r.id}',renderWeight)">删除</button></span></div><div class="b-body">${r.weight} kg${r.fat!=null?' · 体脂 '+r.fat+'%':''}</div>${imgs}`;
-      body.appendChild(d);
+    months.forEach(m=>{
+      const list=groups[m];const key='weight:'+m;
+      const header=document.createElement('div');header.className='month-header';
+      header.innerHTML=`<div><b>${m.replace('-','年')}月</b> <span class="tag">${list.length} 条</span></div><span class="arrow">▼</span>`;
+      const body=document.createElement('div');body.className='month-body'+(openGroups.has(key)?' open':'');
+      list.slice().sort((a,b)=>a.date<b.date?1:-1).forEach(r=>{
+        const d=document.createElement('div');d.className='bubble';
+        const imgs=thumbHtml(r.photos||[],'thumbs');
+        d.innerHTML=`<div class="b-top"><span class="b-tag">体重</span><span class="b-time">${r.date}<button class="del" onclick="delRec('weight','${r.id}',renderWeight)">删除</button></span></div><div class="b-body">${r.weight} kg${r.fat!=null?' · 体脂 '+r.fat+'%':''}</div>${imgs}`;
+        body.appendChild(d);
+      });
+      header.onclick=()=>{if(openGroups.has(key))openGroups.delete(key);else openGroups.add(key);body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
+      box.appendChild(header);box.appendChild(body);
     });
-    header.onclick=()=>{body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
-    box.appendChild(header);box.appendChild(body);
-  });
   // 减重辅助配置摘要
   const m=s.med||{};
   const ws=document.getElementById('wMedSummary');
@@ -1381,19 +1376,19 @@ function renderWeight(){
   if(!mlist.length){mbox.innerHTML='<div class="empty">还没有注射记录</div>';return;}
   const mgroups={};mlist.forEach(r=>{const m=r.date.slice(0,7);mgroups[m]=mgroups[m]||[];mgroups[m].push(r);});
   const mmonths=Object.keys(mgroups).sort((a,b)=>a<b?1:-1);
-  mmonths.forEach(m=>{
-    const list=mgroups[m];
-    const header=document.createElement('div');header.className='month-header';
-    header.innerHTML=`<div><b>${m.replace('-','年')}月</b> <span class="tag">${list.length} 次</span></div><span class="arrow">▼</span>`;
-    const body=document.createElement('div');body.className='month-body';
-    list.forEach(r=>{
-      const d=document.createElement('div');d.className='bubble';d.style.background='#fffdf2';
-      d.innerHTML=`<div class="b-top"><span class="b-tag">${r.drug||'注射'}</span><span class="b-time">${r.date}${r.shotNum?' · 第 '+r.shotNum+' 次':''}<button class="del" onclick="delMed('${r.id}')">删除</button></span></div><div class="b-body">${r.dose?r.dose+'mg · ':''}${r.note||''}</div>`;
-      body.appendChild(d);
+    mmonths.forEach(m=>{
+      const list=mgroups[m];const key='med:'+m;
+      const header=document.createElement('div');header.className='month-header';
+      header.innerHTML=`<div><b>${m.replace('-','年')}月</b> <span class="tag">${list.length} 次</span></div><span class="arrow">▼</span>`;
+      const body=document.createElement('div');body.className='month-body'+(openGroups.has(key)?' open':'');
+      list.forEach(r=>{
+        const d=document.createElement('div');d.className='bubble';d.style.background='#fffdf2';
+        d.innerHTML=`<div class="b-top"><span class="b-tag">${r.drug||'注射'}</span><span class="b-time">${r.date}${r.shotNum?' · 第 '+r.shotNum+' 次':''}<button class="del" onclick="delMed('${r.id}')">删除</button></span></div><div class="b-body">${r.dose?r.dose+'mg · ':''}${r.note||''}</div>`;
+        body.appendChild(d);
+      });
+      header.onclick=()=>{if(openGroups.has(key))openGroups.delete(key);else openGroups.add(key);body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
+      mbox.appendChild(header);mbox.appendChild(body);
     });
-    header.onclick=()=>{body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
-    mbox.appendChild(header);mbox.appendChild(body);
-  });
 }
 document.querySelectorAll('#rangeTabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#rangeTabs button').forEach(x=>x.classList.remove('active'));
@@ -1885,21 +1880,22 @@ function renderSteps(){
     groups[k]=groups[k]||[];groups[k].push(x);
   });
   const months=Object.keys(groups).sort((a,b)=>a<b?1:-1);
-  months.forEach(m=>{
-    const items=groups[m].sort((a,b)=>a.date<b.date?1:-1);
-    const total=items.reduce((s,x)=>s+x.count,0);
-    const card=document.createElement('div');card.className='collapse-card';
-    const header=document.createElement('div');header.className='month-header';
-    header.innerHTML=`<div><b>${m.replace('-','年')}月</b> <span style="color:var(--soft);font-size:13px;">${items.length} 条</span></div><div style="display:flex;align-items:center;gap:10px;"><span class="tag">${total.toLocaleString()} 步</span><span class="arrow">▼</span></div>`;
-    const body=document.createElement('div');body.className='month-body';
-    items.forEach(x=>{
-      const d=document.createElement('div');d.className='bubble';
-      d.innerHTML=`<div class="b-top"><span class="b-tag">步数</span><span class="b-time">${x.date}<button class="del" onclick="delStep('${x.id}')">删除</button></span></div><div class="b-body">${x.count.toLocaleString()} 步</div>`;
-      body.appendChild(d);
+    months.forEach(m=>{
+      const items=groups[m].sort((a,b)=>a.date<b.date?1:-1);
+      const total=items.reduce((s,x)=>s+x.count,0);
+      const key='steps:'+m;
+      const card=document.createElement('div');card.className='collapse-card';
+      const header=document.createElement('div');header.className='month-header';
+      header.innerHTML=`<div><b>${m.replace('-','年')}月</b> <span style="color:var(--soft);font-size:13px;">${items.length} 条</span></div><div style="display:flex;align-items:center;gap:10px;"><span class="tag">${total.toLocaleString()} 步</span><span class="arrow">▼</span></div>`;
+      const body=document.createElement('div');body.className='month-body'+(openGroups.has(key)?' open':'');
+      items.forEach(x=>{
+        const d=document.createElement('div');d.className='bubble';
+        d.innerHTML=`<div class="b-top"><span class="b-tag">步数</span><span class="b-time">${x.date}<button class="del" onclick="delStep('${x.id}')">删除</button></span></div><div class="b-body">${x.count.toLocaleString()} 步</div>`;
+        body.appendChild(d);
+      });
+      header.onclick=()=>{if(openGroups.has(key))openGroups.delete(key);else openGroups.add(key);body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
+      card.appendChild(header);card.appendChild(body);box.appendChild(card);
     });
-    header.onclick=()=>{body.classList.toggle('open');header.querySelector('.arrow').style.transform=body.classList.contains('open')?'rotate(180deg)':'rotate(0deg)';};
-    card.appendChild(header);card.appendChild(body);box.appendChild(card);
-  });
 }
 function addStepFromPage(){
   const ds=document.getElementById('stepDate').value||today();
@@ -1917,6 +1913,19 @@ function hasOpenPeriod(){
   const ps=DB.load('period').filter(x=>x.type==='start'||x.type==='end').sort((a,b)=>a.date<b.date?-1:1);
   if(!ps.length)return false;
   return ps[ps.length-1].type==='start';
+}
+function periodCycles(ps){
+  const recs=ps.filter(x=>x.type==='start'||x.type==='end').sort((a,b)=>a.date<b.date?-1:1);
+  const cycles=[];let cur=null;
+  for(const x of recs){
+    if(x.type==='start'){ if(cur)cycles.push(cur); cur={start:x,end:null,sex:!!x.sex,note:x.note||''}; }
+    else { if(cur){cur.end=x;if(x.sex)cur.sex=true;if(x.note)cur.note=cur.note||x.note;cycles.push(cur);cur=null;} else { cycles.push({start:null,end:x}); } }
+  }
+  if(cur)cycles.push(cur);
+  return cycles;
+}
+function delPeriodCycle(ids){
+  ask('删除这条经期记录？',()=>{ids.forEach(id=>DB.del('period',id));renderPeriod();renderToday();});
 }
 function renderPeriod(){
   const openP=hasOpenPeriod();
@@ -1968,13 +1977,37 @@ function renderPeriod(){
       <div class="bubble"><div class="b-top"><span class="b-tag">平均月经期长度</span><span class="b-time">${avgLen} 天</span></div></div>
     `;
   }else{sum.innerHTML='<div class="empty">尚未记录经期</div>';}
-  // 历史
+  // 历史（按经期周期合并：同一次经期的开始与结束合并为一条）
   const lb=document.getElementById('periodList');lb.innerHTML='';
-  ps.sort((a,b)=>a.date<b.date?1:-1).forEach(x=>{
-    const d=document.createElement('div');d.className='bubble';
-    d.innerHTML=`<div class="b-top"><span class="b-tag">${x.type==='start'?'经期开始':'经期结束'}${x.sex?' · 同房':''}</span><span class="b-time">${x.date}<button class="del" onclick="delRec('period','${x.id}',renderPeriod)">删除</button></span></div>`;
-    lb.appendChild(d);
-  });
+  const cycles=periodCycles(ps);
+  if(!cycles.length){lb.innerHTML='<div class="empty">尚未记录经期</div>';}
+  else{
+    cycles.forEach(cy=>{
+      const ids=[];
+      if(cy.start)ids.push(cy.start.id);
+      if(cy.end)ids.push(cy.end.id);
+      const lo=cy.start?cy.start.date:'0000-00-00', hi=cy.end?cy.end.date:'9999-12-31';
+      const sexRec=ps.find(x=>x.type==='sex'&&x.date>=lo&&x.date<=hi);
+      if(sexRec)ids.push(sexRec.id);
+      const sex=cy.sex||(sexRec&&sexRec.sex);
+      let label='';
+      const fmtM=d=>d.slice(5).replace('-','月')+'日';
+      if(cy.start&&cy.end){const n=Math.round((new Date(cy.end.date)-new Date(cy.start.date))/86400000)+1;label=`${fmtM(cy.start)} - ${fmtM(cy.end)}，共 ${n} 天`;}
+      else if(cy.start){label=`${fmtM(cy.start)} 起（进行中）`;}
+      else{label=`${fmtM(cy.end)} 结束`;}
+      const d=document.createElement('div');d.className='bubble';
+      const idStr=ids.map(i=>"'"+i+"'").join(',');
+      d.innerHTML=`<div class="b-top"><span class="b-tag">经期周期${sex?' · 同房':''}</span><span class="b-time">${label}<button class="del" onclick="delPeriodCycle([${idStr}])">删除</button></span></div>`;
+      lb.appendChild(d);
+    });
+    // 未配对到周期的单独同房/备注记录
+    ps.filter(x=>(x.type==='sex'||x.type==='note')&&!cycles.some(cy=>(cy.start&&cy.start.id===x.id)||(cy.end&&cy.end.id===x.id))).forEach(x=>{
+      const d=document.createElement('div');d.className='bubble';
+      const txt=x.type==='sex'?'同房'+(x.note?('：'+x.note):''):('备注：'+(x.note||''));
+      d.innerHTML=`<div class="b-top"><span class="b-tag">${x.type==='sex'?'同房':'备注'}</span><span class="b-time">${x.date}<button class="del" onclick="delRec('period','${x.id}',renderPeriod)">删除</button></span></div><div class="b-body">${txt}</div>`;
+      lb.appendChild(d);
+    });
+  }
 }
 function openPeriodDay(ds){
   document.getElementById('pdmTitle').textContent=ds+' '+WEEK[(new Date(ds).getDay()+6)%7];
@@ -2131,16 +2164,6 @@ function renderSettings(){
   document.getElementById('aiEndpoint').value=ai.endpoint||'';
   document.getElementById('aiKey').value=ai.key||'';
   document.getElementById('aiModel').value=ai.model||'qwen/qwen3.8-max';
-  // 估算
-  const ws=DB.load('weight');const cur=ws.length?ws[ws.length-1].weight:(s.startW||60);
-  const h=s.height||165;const age=s.age||30;const g=s.gender||'female';
-  const bmr=g==='male'?10*cur+6.25*h-5*age+5:10*cur+6.25*h-5*age-161;
-  const act=activityFromCount(s.activityCount!=null?s.activityCount:4);
-  const td=Math.round(bmr*act);
-  const bmi=cur && h ? (cur/(h/100)*(h/100)).toFixed(1) : '–';
-  document.getElementById('estBMI').textContent=bmi;
-  document.getElementById('estBMR').textContent=Math.round(bmr);
-  document.getElementById('estTDEE').textContent=td;
   // 备份状态
   document.getElementById('backupStatus').textContent=localStorage.getItem('kspace_last_backup')?'上次备份 '+localStorage.getItem('kspace_last_backup'):'尚未备份';
   renderCloud();
@@ -2265,7 +2288,7 @@ async function aiCalcTargets(){
   const profile={gender:s.gender||'female',height:s.height||165,age:s.age||30,weight:cur,targetWeight:s.targetW||null,activityCount:s.activityCount!=null?s.activityCount:4,targetDate:s.targetDate||''};
   const sys='你是一个营养师。请根据用户资料计算每日减脂/维持目标，用中文逐行列出，每行严格格式：项目：数值单位。必须包含：热量(千卡)、蛋白质(克)、碳水(克)、脂肪(克)、饮水(毫升)。不要代码块、不要解释。示例：热量：1500千卡';
   const userText='Profile: '+JSON.stringify(profile);
-  const btn=document.getElementById('aiCalcBtn');btn.disabled=true;btn.textContent='计算中…';
+  const btn=document.getElementById('aiCalcBtn');if(btn){btn.disabled=true;btn.textContent='计算中…';}
   const doCall=()=>fetch(aiSettings().endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+aiSettings().key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model:aiSettings().model||'qwen/qwen3.8-max',messages:[{role:'system',content:sys},{role:'user',content:userText}],max_tokens:300})});
   try{
     let res=await doCall();
@@ -2291,7 +2314,7 @@ async function aiCalcTargets(){
     if(r.water)document.getElementById('setWater').value=r.water;
     toast('已自动填入目标，确认后点保存');
   }catch(e){toast(friendlyAiErr(e));}
-  finally{btn.disabled=false;btn.textContent='AI 计算目标';}
+  finally{if(btn){btn.disabled=false;btn.textContent='AI 计算目标';}}
 }
 function exportJSON(){
   const data={settings:DB.obj('settings'),weight:DB.load('weight'),food:DB.load('food'),exercise:DB.load('exercise'),period:DB.load('period'),todo:DB.load('todo'),journal:DB.load('journal'),supp:DB.load('supp'),med:DB.load('med'),steps:DB.load('steps'),exportedAt:nowISO()};
@@ -2380,7 +2403,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v32';
+const KSPACE_VERSION='kspace-v33';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;

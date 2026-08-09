@@ -62,9 +62,23 @@ const Cloud=(function(){
   }
   async function pushSave(t,arr){
     const u=user(); if(!u)return;
+    if(!arr||!arr.length)return;
     const rows=arr.map(o=>({id:String(o.id),user_id:u.id,data:o,created_at:o.createdAt||new Date().toISOString()}));
-    const r=await fetch(rest(t),{method:'POST',headers:headers({'Prefer':'resolution=merge-duplicates'}),body:JSON.stringify(rows)});
-    if(!r.ok)throw new Error('全量同步 '+t+' 失败: '+(await r.text()).slice(0,80));
+    // 先尝试整批推送（高效）
+    try{
+      const r=await fetch(rest(t),{method:'POST',headers:headers({'Prefer':'resolution=merge-duplicates'}),body:JSON.stringify(rows)});
+      if(r.ok)return;
+      console.warn('[cloud] batch push '+t+' failed:',(await r.text()).slice(0,80));
+    }catch(e){ console.warn('[cloud] batch push '+t+' error:',e); }
+    // 回退：逐条推送，避免单条数据过大（如带照片的体重记录）拖垮整批导致全部失败
+    let fail=0;
+    for(const row of rows){
+      try{
+        const r=await fetch(rest(t),{method:'POST',headers:headers({'Prefer':'resolution=merge-duplicates'}),body:JSON.stringify(row)});
+        if(!r.ok){fail++;console.warn('[cloud] row push '+t+' '+row.id+' failed:',(await r.text()).slice(0,80));}
+      }catch(e){fail++;console.warn('[cloud] row push '+t+' '+row.id+' error:',e);}
+    }
+    if(fail===rows.length) throw new Error('全量同步 '+t+' 失败，云端可能未连接或字段超限');
   }
   async function pushDel(t,id){
     const r=await fetch(rest(t)+'?id=eq.'+encodeURIComponent(String(id)),{method:'DELETE',headers:headers()});
