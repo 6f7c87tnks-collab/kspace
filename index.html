@@ -458,9 +458,9 @@
       <div class="card">
         <h3>记录步数 <button class="icon-btn" style="margin-left:auto;width:30px;height:30px;border-radius:8px;" onclick="addStepFromPage()" aria-label="保存步数"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></button></h3>
         <p class="sub">从 RingConn App 读数后填入，本周复盘会计算平均步数。</p>
-        <div class="row" style="align-items:flex-end;">
-          <div style="flex:1 1 130px;min-width:0;"><label>日期</label><input type="date" id="stepDate" style="width:100%;box-sizing:border-box;"></div>
-          <div style="flex:2 1 140px;min-width:0;"><label>步数</label><input type="number" id="stepCount" placeholder="如 8200" style="width:100%;box-sizing:border-box;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:10px;align-items:end;">
+          <div><label>日期</label><input type="date" id="stepDate" style="width:100%;min-width:0;box-sizing:border-box;"></div>
+          <div><label>步数</label><input type="number" id="stepCount" placeholder="如 8200" style="width:100%;min-width:0;box-sizing:border-box;"></div>
         </div>
         <div id="stepList" style="margin-top:12px;"></div>
       </div>
@@ -1182,8 +1182,11 @@ function renderToday(){
   let planDay=1;if(ws.length){const d0=new Date(ws[0].date);planDay=Math.max(1,Math.floor((new Date(today())-d0)/86400000)+1);}
   document.getElementById('heroPlanDay').textContent=planDay;
   // 距目标天数
-  if(s.targetDate){const eta=Math.ceil((new Date(s.targetDate)-new Date(today()))/86400000);document.getElementById('heroEta').textContent=eta>0?eta:'已到';}
-  else{document.getElementById('heroEta').textContent='–';}
+  if(s.targetDate){
+    const eta=Math.ceil((new Date(s.targetDate+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000);
+    document.getElementById('heroEta').textContent=eta>0?eta:(eta===0?'今天':'已过');
+  }
+  else{document.getElementById('heroEta').textContent='未设';}
   // 能量
   const td=today();const kcal=dayKcal(td);const targetK=s.kcal||1700;
   document.getElementById('enIn').innerHTML=`${kcal} <span style="font-size:14px;color:var(--soft);">kcal</span>`;
@@ -1192,13 +1195,14 @@ function renderToday(){
   document.getElementById('enPB').style.width=Math.min(100,m.p/tp*100)+'%';document.getElementById('enPV').textContent=`${m.p}/${tp}g`;
   document.getElementById('enCB').style.width=Math.min(100,m.c/tc*100)+'%';document.getElementById('enCV').textContent=`${m.c}/${tc}g`;
   document.getElementById('enFB').style.width=Math.min(100,m.f/tf*100)+'%';document.getElementById('enFV').textContent=`${m.f}/${tf}g`;
-  // 身体趋势
+  // 身体趋势（无体重记录时，用设置里的起始体重兜底，让卡片立即有数）
   const w=ws.slice().sort((a,b)=>a.date<b.date?-1:1);const last=w[w.length-1];
-  document.getElementById('tdNow').textContent=(last?last.weight:'–')+' kg';
+  const curW=last?last.weight:(s.startW||null);
+  document.getElementById('tdNow').textContent=(curW!=null?curW:'–')+' kg';
   const last7=w.slice(-7);const avg7=last7.length?(last7.reduce((a,b)=>a+b.weight,0)/last7.length).toFixed(1):'–';
   document.getElementById('tdAvg7').textContent=avg7+' kg';
   const tg=s.targetW;
-  if(last&&tg)document.getElementById('tdToGo').textContent=(last.weight-tg>0?(last.weight-tg).toFixed(1):(tg-last.weight).toFixed(1))+' kg';
+  if(curW!=null&&tg!=null)document.getElementById('tdToGo').textContent=(curW-tg>0?(curW-tg).toFixed(1):(tg-curW).toFixed(1))+' kg';
   else document.getElementById('tdToGo').textContent='– kg';
   // 活动
   const exs=DB.load('exercise').filter(x=>x.date===td);const ekcal=exs.reduce((a,b)=>a+(b.kcal||0),0);
@@ -2403,7 +2407,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v33';
+const KSPACE_VERSION='kspace-v34';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
