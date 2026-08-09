@@ -994,6 +994,28 @@ function safeJsonParse(txt){
   if(m){ try{ return JSON.parse(m[1]); }catch(_){} }
   throw new Error('AI 返回不是 JSON：'+raw.slice(0,120));
 }
+/* 从 AI 自然语言回复中提取食物（每行：食物名 分量 热量） */
+function parseAiFoodText(text){
+  if(!text)return [];
+  const items=[];
+  const lines=text.split(/[\n;；。]+/).map(s=>s.trim()).filter(Boolean);
+  for(const line of lines){
+    let m=line.match(/^(.+?)[:：]\s*(\d+(?:\.\d+)?)\s*(克|g|个|份|片|块|杯|碗|根|条|包|ml|毫升)?\s*[，,、]?\s*(\d+(?:\.\d+)?)\s*(千卡|大卡|kcal|卡)/i);
+    if(!m)m=line.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(克|g|个|份|片|块|杯|碗|根|条|包|ml|毫升)?\s+(\d+(?:\.\d+)?)\s*(千卡|大卡|kcal|卡)\s*$/i);
+    if(m){
+      const name=m[1].replace(/[^\u4e00-\u9fa5A-Za-z]/g,'').trim();
+      const grams=parseFloat(m[2])||0;
+      const kcal=Math.round(parseFloat(m[3])||0);
+      if(name&&kcal>0)items.push({text:name,food:name,grams:Math.round(grams),kcal,p:0,c:0,f:0});
+    }
+  }
+  return items;
+}
+/* 从 AI 自然语言回复中提取每日目标 */
+function parseAiTargets(text){
+  const get=(label)=>{const m=text.match(new RegExp(label+'\\s*[:：]?\\s*(\\d+(?:\\.\\d+)?)\\s*(千卡|大卡|kcal|卡|克|g|毫升|ml)?','i'));return m?parseFloat(m[1]):null;};
+  return {kcal:get('热量')||get('kcal'),protein:get('蛋白质')||get('蛋白')||get('protein'),carb:get('碳水')||get('carb'),fat:get('脂肪')||get('fat'),water:get('饮水')||get('水')||get('water')};
+}
 async function testAiConnection(){
   const endpoint=document.getElementById('aiEndpoint').value.trim();
   const key=document.getElementById('aiKey').value.trim();
@@ -1032,7 +1054,7 @@ async function aiAnalyze(type,text,photos){
   const medCtx=medContext();
   if(medCtx)system+=medCtx+'\n';
   if(type==='food'){
-    system='You are a nutrition assistant. Analyze the food in the images and/or text. Return ONLY a JSON: {"items":[{"name":"string","grams":number,"kcal":number,"p":number,"c":number,"f":number}],"water":number,"note":"string"}. No markdown.';
+    system='你是一个营养师。请分析图片和/或文字中的食物。用中文逐行列出，每行严格格式：食物名 分量(克或个) 热量(千卡)。多种食物每种一行。不要代码块、不要序号、不要解释，只输出食物行。示例：白米饭 150克 174千卡';
     if(!userText)userText='请分析照片中的食物。';
   }else if(type==='exercise'){
     system='You are a fitness assistant. Analyze the exercise. Return ONLY a JSON: {"act":"string","minutes":number,"kcal":number,"note":"string"}. No markdown.';
@@ -1055,7 +1077,14 @@ async function aiAnalyze(type,text,photos){
     }
     const data=await res.json();
     const txt=data.choices?.[0]?.message?.content||'';
-    if(!txt.trim()){ toast('AI 返回为空，可能该模型不支持图片识别或图片过大'); return null; }
+    if(!txt.trim()){ toast('AI 返回为空，可能图片识别失败或模型不支持图片'); return null; }
+    if(type==='food'){
+      let items=[];
+      try{ const j=safeJsonParse(txt); if(j&&j.items)items=j.items; else if(Array.isArray(j))items=j; }catch(_){}
+      if(!items.length) items=parseAiFoodText(txt);
+      if(items.length) return {items,note:''};
+      return null;
+    }
     return safeJsonParse(txt);
   }catch(e){toast(friendlyAiErr(e));return null;}
 }
@@ -2185,7 +2214,7 @@ async function aiCalcTargets(){
   const s=DB.obj('settings');
   const ws=DB.load('weight');const cur=ws.length?ws[ws.length-1].weight:(s.startW||60);
   const profile={gender:s.gender||'female',height:s.height||165,age:s.age||30,weight:cur,targetWeight:s.targetW||null,activityCount:s.activityCount!=null?s.activityCount:4,targetDate:s.targetDate||''};
-  const sys='You are a nutrition coach. Based on the user profile, calculate daily targets for a healthy fat-loss/maintenance plan. Return ONLY a JSON: {"kcal":number,"protein":number,"carb":number,"fat":number,"water":number}. Units: kcal, grams, ml. No markdown.';
+  const sys='你是一个营养师。请根据用户资料计算每日减脂/维持目标，用中文逐行列出，每行严格格式：项目：数值单位。必须包含：热量(千卡)、蛋白质(克)、碳水(克)、脂肪(克)、饮水(毫升)。不要代码块、不要解释。示例：热量：1500千卡';
   const userText='Profile: '+JSON.stringify(profile);
   const btn=document.getElementById('aiCalcBtn');btn.disabled=true;btn.textContent='计算中…';
   const doCall=()=>fetch(aiSettings().endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+aiSettings().key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model:aiSettings().model||'qwen/qwen3.8-max',messages:[{role:'system',content:sys},{role:'user',content:userText}],max_tokens:300})});
@@ -2204,8 +2233,8 @@ async function aiCalcTargets(){
       if(!res.ok){toast(friendlyAiErr(null,res.status));return;}
       data=await res.json();txt=data.choices?.[0]?.message?.content||'';
     }
-    if(!txt.trim()){ toast('AI 返回为空，建议换模型（如 meta-llama/llama-3.2-90b-vision-instruct）'); return; }
-    const r=safeJsonParse(txt);
+    if(!txt.trim()){ toast('AI 两次都返回为空，建议重试或换一个模型'); return; }
+    const r=parseAiTargets(txt);
     if(r.kcal)document.getElementById('setKcal').value=r.kcal;
     if(r.protein)document.getElementById('setP').value=r.protein;
     if(r.carb)document.getElementById('setC').value=r.carb;
@@ -2302,7 +2331,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v30';
+const KSPACE_VERSION='kspace-v31';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
