@@ -396,7 +396,11 @@
       <div class="card">
         <h3>减重辅助</h3>
         <div class="med-summary" id="wMedSummary" style="margin-bottom:10px;"></div>
-        <div class="btn-row"><button class="btn ghost sm" onclick="openMedModal()">用药设置</button></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;margin-bottom:10px;">
+          <div><label>日期</label><input type="date" id="wMedDate" style="width:100%;min-width:0;box-sizing:border-box;"></div>
+          <div><label>第几次</label><input type="number" id="wMedShotNum" min="1" placeholder="自动" style="width:100%;min-width:0;box-sizing:border-box;"></div>
+        </div>
+        <div class="btn-row"><button class="btn sm" onclick="addWeightMed()">记录本次注射</button><button class="btn ghost sm" onclick="openMedModal()">用药设置</button></div>
       </div>
       <div class="card cream">
         <h3>注射记录 <span class="tag" id="medCountTag">0 次</span></h3>
@@ -1171,6 +1175,8 @@ function compressImg(file,maxW,cb){const reader=new FileReader();reader.onload=(
 
 /* ============ 今日速览 ============ */
 function renderToday(){
+  // 防御：同步回调或页面未完全解析时，今日速览 DOM 可能尚未就绪
+  if(!document.getElementById('heroNick'))return;
   const s=DB.obj('settings');const nick=s.nick||'K';
   const h=new Date().getHours();const greet=h<11?'早上好':h<13?'中午好':h<18?'下午好':'晚上好';
   document.getElementById('heroGreet').innerHTML=`${greet} · <span>${nick}</span>`;
@@ -1240,14 +1246,20 @@ function delTodo(id){DB.del('todo',id);renderTodo();}
 /* 用药记录 / 减重辅助 */
 function renderMed(){
   const s=DB.obj('settings');const m=s.med||{};
-  const md=document.getElementById('medDate');
-  if(!md)return; // 今日速览已移除，只在有 DOM 的页面渲染
-  if(!md.value)md.value=today();
-  const ms=document.getElementById('medShotNum');
-  if(ms){
+  // 体重页注射输入区默认值
+  const wmd=document.getElementById('wMedDate');
+  if(wmd&&!wmd.value)wmd.value=today();
+  const wms=document.getElementById('wMedShotNum');
+  if(wms&&!wms.value){
     const list=DB.load('med');
-    const next=list.length?Math.max(...list.map(x=>x.shotNum||0))+1:1;
-    if(!ms.value)ms.value=next;
+    wms.value=list.length?Math.max(...list.map(x=>x.shotNum||0))+1:1;
+  }
+  // 旧版今日速览 DOM（兼容，若存在则渲染）
+  const md=document.getElementById('medDate');
+  if(md){
+    if(!md.value)md.value=today();
+    const ms=document.getElementById('medShotNum');
+    if(ms&&!ms.value){const list=DB.load('med');ms.value=list.length?Math.max(...list.map(x=>x.shotNum||0))+1:1;}
   }
   const summary=document.getElementById('medSummary');
   if(summary){
@@ -1264,6 +1276,18 @@ function renderMed(){
     d.innerHTML=`<div class="b-top"><span class="b-tag">${x.drug||'注射'}</span><span class="b-time">${x.date}<button class="del" onclick="delMed('${x.id}')">删除</button></span></div><div class="b-body">${x.shotNum?'第 '+x.shotNum+' 次 · ':''}${x.dose?x.dose+'mg · ':''}${x.note||''}</div>`;
     feed.appendChild(d);
   });
+}
+function addWeightMed(){
+  const s=DB.obj('settings');const m=s.med||{};
+  const ds=document.getElementById('wMedDate').value||today();
+  const exist=DB.load('med').find(x=>x.date===ds);
+  if(exist){toast(ds+' 已记录注射');return;}
+  const sn=document.getElementById('wMedShotNum');
+  const shotNum=sn.value?parseInt(sn.value):(DB.load('med').length?Math.max(...DB.load('med').map(x=>x.shotNum||0))+1:1);
+  DB.add('med',{date:ds,drug:m.drug||'替尔泊肽',dose:m.dose||2.5,shotNum,note:m.note||'',createdAt:nowISO()});
+  sn.value='';
+  renderMed();renderWeight();renderToday();
+  toast('已记录 '+ds+' 第 '+shotNum+' 次注射');
 }
 function delMed(id){DB.del('med',id);renderMed();renderWeight();renderToday();}
 function quickMed(){
@@ -1373,6 +1397,8 @@ function renderWeight(){
   const m=s.med||{};
   const ws=document.getElementById('wMedSummary');
   if(ws){ws.innerHTML=`<div class="med-summary"><div class="cell"><div class="label">药物名称</div><div class="value">${m.drug||'未设置'}</div></div><div class="cell"><div class="label">单次剂量 MG</div><div class="value">${m.dose||'–'}</div></div></div>`;}
+  const wmd=document.getElementById('wMedDate');if(wmd&&!wmd.value)wmd.value=today();
+  const wmsn=document.getElementById('wMedShotNum');if(wmsn&&!wmsn.value){const ml=DB.load('med');wmsn.value=ml.length?Math.max(...ml.map(x=>x.shotNum||0))+1:1;}
   // 注射记录按月份折叠
   const mlist=DB.load('med').slice().sort((a,b)=>a.date<b.date?1:-1);
   const mt=document.getElementById('medCountTag');if(mt)mt.textContent=mlist.length+' 次';
@@ -2407,7 +2433,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v34';
+const KSPACE_VERSION='kspace-v35';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
