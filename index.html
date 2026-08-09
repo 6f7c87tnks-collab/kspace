@@ -872,16 +872,15 @@ function matchFood(tok){for(const f of FOODS){if(tok.includes(f.n))return f;if(f
 function parseFood(text){
   const items=[];const toks=text.split(/[,，、;；\n和]+|\s+/).map(s=>s.trim()).filter(Boolean);
   for(const tk of toks){
-    const f=matchFood(tk);let grams=0,kcal=0,p=0,c=0,ff=0;
+    const f=matchFood(tk);if(!f) continue;
+    let grams=0,kcal=0,p=0,c=0,ff=0;
     const gM=tk.match(/(\d+\.?\d*)\s*(kg|g|克)/i),mlM=tk.match(/(\d+\.?\d*)\s*(l|ml|毫升)/i),cntM=tk.match(/(\d+\.?\d*)\s*(个|只|根|片|块|杯|瓶|包|份|碗|条)/);
-    if(f){
-      if(gM){grams=parseFloat(gM[1]);if(/kg/i.test(gM[0]))grams*=1000;}
-      else if(mlM){grams=parseFloat(mlM[1]);if(/^l$/i.test(mlM[0].trim()))grams*=1000;}
-      else if(cntM&&f.pieceG){grams=f.pieceG*parseFloat(cntM[1]);}
-      else{grams=f.pieceG?f.pieceG:100;}
-      const r=grams/100;kcal=Math.round(f.kcal*r);p=+(f.p*r).toFixed(1);c=+(f.c*r).toFixed(1);ff=+(f.f*r).toFixed(1);
-    }
-    items.push({text:tk,food:f?f.n:null,grams:Math.round(grams),kcal,p,c,f:ff});
+    if(gM){grams=parseFloat(gM[1]);if(/kg/i.test(gM[0]))grams*=1000;}
+    else if(mlM){grams=parseFloat(mlM[1]);if(/^l$/i.test(mlM[0].trim()))grams*=1000;}
+    else if(cntM&&f.pieceG){grams=f.pieceG*parseFloat(cntM[1]);}
+    else{grams=f.pieceG?f.pieceG:100;}
+    const r=grams/100;kcal=Math.round(f.kcal*r);p=+(f.p*r).toFixed(1);c=+(f.c*r).toFixed(1);ff=+(f.f*r).toFixed(1);
+    items.push({text:tk,food:f.n,grams:Math.round(grams),kcal,p,c,f:ff});
   }
   return items;
 }
@@ -1713,6 +1712,7 @@ async function sendMeal(meal){
   if(!text&&!mealPhotos[meal].length){toast('写点或拍张吧');return;}
   let items=[],note=text,kcal=0;
   if(mealPhotos[meal].length && aiEnabled()){toast('AI 解析中…');const ai=await aiAnalyze('food',text||'',mealPhotos[meal]);if(ai){items=(ai.items||[]).map(i=>({text:i.name,food:i.name,grams:i.grams||0,kcal:i.kcal||0,p:i.p||0,c:i.c||0,f:i.f||0}));kcal=items.reduce((a,b)=>a+b.kcal,0);if(!text&&ai.note)note=ai.note;}else if(!text){toast('AI 解析失败，请检查模型是否可用，或手动输入食物名称');return;}}
+  if(!items.length && text && aiEnabled()){const ai=await aiAnalyze('food',text,null);if(ai&&ai.items&&ai.items.length){items=(ai.items||[]).map(i=>({text:i.name,food:i.name,grams:i.grams||0,kcal:i.kcal||0,p:i.p||0,c:i.c||0,f:i.f||0}));kcal=items.reduce((a,b)=>a+b.kcal,0);}}
   if(!items.length&&text){items=parseFood(text);kcal=items.reduce((a,b)=>a+b.kcal,0);}
   DB.add('food',{date:foodDate,meal,text:note||'(照片记录)',items,photos:mealPhotos[meal],kcal,water:0,createdAt:nowISO()});
   mealPhotos[meal]=[];document.getElementById('mt_'+meal).value='';document.getElementById('mc_'+meal).style.display='none';document.getElementById('mf_'+meal).value='';
@@ -1726,6 +1726,7 @@ async function sendFoodModal(){
   if(!text&&!foodModalPhotos.length){toast('写点或拍张吧');return;}
   let items=[],note=text,kcal=0;
   if(foodModalPhotos.length && aiEnabled()){toast('AI 解析中…');const ai=await aiAnalyze('food',text||'',foodModalPhotos);if(ai){items=(ai.items||[]).map(i=>({text:i.name,food:i.name,grams:i.grams||0,kcal:i.kcal||0,p:i.p||0,c:i.c||0,f:i.f||0}));kcal=items.reduce((a,b)=>a+b.kcal,0);if(!text&&ai.note)note=ai.note;}else if(!text){toast('AI 解析失败，请检查模型是否可用，或手动输入食物名称');return;}}
+  if(!items.length && text && aiEnabled()){const ai=await aiAnalyze('food',text,null);if(ai&&ai.items&&ai.items.length){items=(ai.items||[]).map(i=>({text:i.name,food:i.name,grams:i.grams||0,kcal:i.kcal||0,p:i.p||0,c:i.c||0,f:i.f||0}));kcal=items.reduce((a,b)=>a+b.kcal,0);}}
   if(!items.length&&text){items=parseFood(text);kcal=items.reduce((a,b)=>a+b.kcal,0);}
   DB.add('food',{date:foodDate,meal:foodModalMeal,text:note||'(照片记录)',items,photos:foodModalPhotos,kcal,water:0,createdAt:nowISO()});
   foodModalPhotos=[];renderPreviews('foodModalPreviews',foodModalPhotos,'removeFoodModalPhoto');document.getElementById('foodModalText').value='';
@@ -2187,15 +2188,23 @@ async function aiCalcTargets(){
   const sys='You are a nutrition coach. Based on the user profile, calculate daily targets for a healthy fat-loss/maintenance plan. Return ONLY a JSON: {"kcal":number,"protein":number,"carb":number,"fat":number,"water":number}. Units: kcal, grams, ml. No markdown.';
   const userText='Profile: '+JSON.stringify(profile);
   const btn=document.getElementById('aiCalcBtn');btn.disabled=true;btn.textContent='计算中…';
+  const doCall=()=>fetch(aiSettings().endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+aiSettings().key,'HTTP-Referer':location.origin,'X-Title':'K Space'},body:JSON.stringify({model:aiSettings().model||'qwen/qwen3.8-max',messages:[{role:'system',content:sys},{role:'user',content:userText}],max_tokens:300})});
   try{
-    const res=await fetch(aiSettings().endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+aiSettings().key},body:JSON.stringify({model:aiSettings().model||'qwen/qwen3.8-max',messages:[{role:'system',content:sys},{role:'user',content:userText}],max_tokens:300})});
+    let res=await doCall();
     if(!res.ok){
       let detail='';
       try{const err=await res.clone().json();detail=(err.error&&err.error.message)||err.message||JSON.stringify(err).slice(0,120);}catch(_){try{detail=await res.text();}catch(__){}}
       toast(friendlyAiErr(null,res.status,detail));return;
     }
-    const data=await res.json();const txt=data.choices?.[0]?.message?.content||'';
-    if(!txt.trim()){ toast('AI 返回为空'); return; }
+    let data=await res.json();let txt=data.choices?.[0]?.message?.content||'';
+    if(!txt.trim()){
+      toast('AI 首次返回为空，1秒后重试…');
+      await new Promise(r=>setTimeout(r,1200));
+      res=await doCall();
+      if(!res.ok){toast(friendlyAiErr(null,res.status));return;}
+      data=await res.json();txt=data.choices?.[0]?.message?.content||'';
+    }
+    if(!txt.trim()){ toast('AI 返回为空，建议换模型（如 meta-llama/llama-3.2-90b-vision-instruct）'); return; }
     const r=safeJsonParse(txt);
     if(r.kcal)document.getElementById('setKcal').value=r.kcal;
     if(r.protein)document.getElementById('setP').value=r.protein;
@@ -2293,7 +2302,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v29';
+const KSPACE_VERSION='kspace-v30';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
