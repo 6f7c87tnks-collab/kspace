@@ -700,8 +700,16 @@
       <div style="flex:2;"><label>日期</label><input type="date" id="qwDate"></div>
       <div style="flex:1;"><label>时间</label><input type="time" id="qwTime"></div>
     </div>
-    <label>体重 (kg)</label><input type="number" id="qwWeight" step="0.1" inputmode="decimal" placeholder="如 65.4">
+    <label>快速输入（如 <b>65.2 28.5</b>，空格分隔体重kg与体脂%）</label>
+    <div class="row" style="align-items:flex-end;gap:8px;">
+      <input type="text" id="qwQuick" inputmode="decimal" placeholder="65.2 28.5" style="flex:1;">
+      <button class="btn ghost sm" type="button" onclick="parseBodyInput()">识别</button>
+    </div>
+    <label style="margin-top:10px;">体重 (kg)</label><input type="number" id="qwWeight" step="0.1" inputmode="decimal" placeholder="如 65.4">
     <label>体脂 (%，可选)</label><input type="number" id="qwFat" step="0.1" inputmode="decimal" placeholder="如 28.5">
+    <label style="margin-top:10px;">体脂秤照片（可选，留底用）</label>
+    <input type="file" accept="image/*" multiple onchange="onBodyPhoto(event)" style="font-size:16px;">
+    <div id="bodyPreviews" class="thumbs" style="margin-top:8px;"></div>
     <div class="btn-row" style="margin-top:18px;"><button class="btn ghost sm" onclick="closeBodyModal()">取消</button><button class="btn sm" onclick="saveQuickWeight()">保存记录</button></div>
   </div>
 </div>
@@ -869,18 +877,37 @@ const FOODS=[
   {n:'豆浆',kcal:31,p:3,c:1.2,f:1.6,unit:'ml'},{n:'面条',kcal:280,p:9,c:55,f:1},{n:'饺子',kcal:240,p:9,c:28,f:10,pieceG:25}
 ];
 function matchFood(tok){for(const f of FOODS){if(tok.includes(f.n))return f;if(f.alias&&tok.includes(f.alias))return f;}return null;}
+const UNIT_RE=/(\d+\.?\d*)\s*(kg|g|克|l|ml|毫升|千卡|大卡|卡|kcal|cal|个|只|根|片|块|杯|瓶|包|份|碗|条)/gi;
 function parseFood(text){
-  const items=[];const toks=text.split(/[,，、;；\n和]+|\s+/).map(s=>s.trim()).filter(Boolean);
+  const items=[];
+  // 先按分隔符/空格拆，再把"纯数字+单位"的 token 归并到前一个食物（如「芋泥蛋糕 320千卡」）
+  const raw=text.split(/[,，、;；\n和加+]+|\s+/).map(s=>s.trim()).filter(Boolean);
+  const toks=[];
+  for(const t of raw){
+    if(/^[\d.]+/.test(t) && !/[一-龥]/.test(t)){ // 无中文、以数字开头 → 视为附加信息
+      if(toks.length) toks[toks.length-1]+=' '+t; else toks.push(t);
+    }else toks.push(t);
+  }
   for(const tk of toks){
-    const f=matchFood(tk);if(!f) continue;
-    let grams=0,kcal=0,p=0,c=0,ff=0;
     const gM=tk.match(/(\d+\.?\d*)\s*(kg|g|克)/i),mlM=tk.match(/(\d+\.?\d*)\s*(l|ml|毫升)/i),cntM=tk.match(/(\d+\.?\d*)\s*(个|只|根|片|块|杯|瓶|包|份|碗|条)/);
+    const kcalM=tk.match(/(\d+\.?\d*)\s*(千卡|大卡|卡|kcal|cal)/i);
+    const userKcal=kcalM?parseFloat(kcalM[1]):null;
+    let name=tk.replace(UNIT_RE,'').replace(/\s+/g,'').trim();
+    if(!name && userKcal==null) continue;
+    const f=matchFood(name);
+    let grams=0,kcal=0,p=0,c=0,ff=0;
     if(gM){grams=parseFloat(gM[1]);if(/kg/i.test(gM[0]))grams*=1000;}
     else if(mlM){grams=parseFloat(mlM[1]);if(/^l$/i.test(mlM[0].trim()))grams*=1000;}
-    else if(cntM&&f.pieceG){grams=f.pieceG*parseFloat(cntM[1]);}
-    else{grams=f.pieceG?f.pieceG:100;}
-    const r=grams/100;kcal=Math.round(f.kcal*r);p=+(f.p*r).toFixed(1);c=+(f.c*r).toFixed(1);ff=+(f.f*r).toFixed(1);
-    items.push({text:tk,food:f.n,grams:Math.round(grams),kcal,p,c,f:ff});
+    else if(cntM&&f&&f.pieceG){grams=f.pieceG*parseFloat(cntM[1]);}
+    else if(f&&f.pieceG){grams=f.pieceG;}
+    else if(userKcal==null){grams=100;}
+    if(userKcal!=null){ // 用户显式给了热量，优先采用
+      kcal=Math.round(userKcal);
+      if(f){const r=grams/100;p=+(f.p*r).toFixed(1);c=+(f.c*r).toFixed(1);ff=+(f.f*r).toFixed(1);}
+    }else if(f){ // 本地库匹配，按克数/数量算
+      const r=grams/100;kcal=Math.round(f.kcal*r);p=+(f.p*r).toFixed(1);c=+(f.c*r).toFixed(1);ff=+(f.f*r).toFixed(1);
+    }else continue; // 既无本地匹配也无热量，跳过
+    items.push({text:tk,food:f?f.n:null,grams:Math.round(grams),kcal,p,c,f:ff});
   }
   return items;
 }
@@ -1297,6 +1324,7 @@ function toggleMic(){
 
 /* ============ 体重记录 ============ */
 let weightRange='30';
+let bodyModalPhotos=[];
 function renderWeight(){
   const w=DB.load('weight').slice().sort((a,b)=>a.date<b.date?-1:1);
   const s=DB.obj('settings');
@@ -1383,24 +1411,45 @@ function openBodyModal(){
   document.getElementById('qwTime').value=now.toTimeString().slice(0,5);
   document.getElementById('qwWeight').value='';
   document.getElementById('qwFat').value='';
+  document.getElementById('qwQuick').value='';
+  bodyModalPhotos=[];renderPreviews('bodyPreviews',bodyModalPhotos,'removeBodyPhoto');
   document.getElementById('bodyModal').classList.add('open');
-  setTimeout(()=>document.getElementById('qwWeight').focus(),0);
+  setTimeout(()=>document.getElementById('qwQuick').focus(),0);
 }
 function closeBodyModal(){document.getElementById('bodyModal').classList.remove('open');}
+function parseBodyInput(){
+  const quick=document.getElementById('qwQuick').value.trim();
+  const nums=(quick.match(/[\d]+\.?\d*/g)||[]).map(Number);
+  if(!nums.length){toast('没识别出数字');return;}
+  if(nums[0]!=null)document.getElementById('qwWeight').value=nums[0];
+  if(nums[1]!=null)document.getElementById('qwFat').value=nums[1];
+  toast('已识别：体重 '+nums[0]+(nums[1]!=null?(' 体脂 '+nums[1]+'%'):''));
+}
+function onBodyPhoto(e){const files=Array.from(e.target.files).slice(0,3);if(!files.length)return;let done=0;files.forEach(f=>compressImg(f,800,data=>{bodyModalPhotos.push(data);done++;if(done===files.length)renderPreviews('bodyPreviews',bodyModalPhotos,'removeBodyPhoto');}));}
+function removeBodyPhoto(i){bodyModalPhotos.splice(i,1);renderPreviews('bodyPreviews',bodyModalPhotos,'removeBodyPhoto');}
 function saveQuickWeight(){
   const date=document.getElementById('qwDate').value||today();
-  const weight=parseFloat(document.getElementById('qwWeight').value);
+  const quick=document.getElementById('qwQuick').value.trim();
+  let weight=parseFloat(document.getElementById('qwWeight').value);
+  let fatV=document.getElementById('qwFat').value;
+  let fat=fatV?parseFloat(fatV):null;
+  // 速记兜底：体重框空但有速记内容时自动解析
+  if((isNaN(weight)||weight<=0) && quick){
+    const nums=(quick.match(/[\d]+\.?\d*/g)||[]).map(Number);
+    if(nums.length){
+      if(isNaN(weight)||weight<=0) weight=nums[0];
+      if(fat==null && nums[1]!=null) fat=nums[1];
+    }
+  }
   if(isNaN(weight)||weight<=0){toast('请输入有效体重');return;}
-  const fatV=document.getElementById('qwFat').value;
-  const fat=fatV?parseFloat(fatV):null;
-  const rec={date,weight,fat,createdAt:nowISO(),time:document.getElementById('qwTime').value||undefined};
+  const rec={date,weight,fat,photos:bodyModalPhotos.slice(),createdAt:nowISO(),time:document.getElementById('qwTime').value||undefined};
   const list=DB.load('weight');
   const idx=list.findIndex(x=>x.date===date);
   if(idx>=0){list[idx]=rec;}else{list.push(rec);}
   DB.save('weight',list);
   closeBodyModal();
   renderToday();renderWeight();renderWeekly();
-  toast('已保存 '+date+' 体重');
+  toast('已保存 '+date+' 体重'+(fat!=null?(' 体脂'+fat+'%'):''));
 }
 function openQuickModal(){document.getElementById('quickModal').classList.add('open');}
 function closeQuickModal(){document.getElementById('quickModal').classList.remove('open');}
@@ -2331,7 +2380,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v31';
+const KSPACE_VERSION='kspace-v32';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
