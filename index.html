@@ -332,43 +332,6 @@
         <div id="todoList" class="feed" style="margin-top:10px;"></div>
       </div>
 
-      <div class="grid2">
-        <div class="card">
-          <h3>今日能量 <span class="tag">估算填可在设置中调整</span></h3>
-          <div class="stat-row"><div><div class="k">已摄入</div><div class="v" id="enIn">0 <span style="font-size:14px;color:var(--soft);">kcal</span></div></div><div style="text-align:right;"><div class="k">剩余预算</div><div class="v" id="enLeft">1700 <span style="font-size:14px;color:var(--soft);">kcal</span></div></div></div>
-          <div class="macros">
-            <div class="macros-row"><div class="lbl">蛋白质</div><div class="bar progress"><span id="enPB" style="width:0%"></span></div><div class="val" id="enPV">0/110g</div></div>
-            <div class="macros-row"><div class="lbl">碳水</div><div class="bar progress"><span id="enCB" style="width:0%"></span></div><div class="val" id="enCV">0/191g</div></div>
-            <div class="macros-row"><div class="lbl">脂肪</div><div class="bar progress"><span id="enFB" style="width:0%"></span></div><div class="val" id="enFV">0/55g</div></div>
-          </div>
-        </div>
-        <div class="card">
-          <h3>今日饮水 <span class="tag">点击快速记录</span></h3>
-          <div style="display:flex;align-items:center;gap:14px;cursor:pointer;" onclick="openWaterModal()">
-            <div class="ring"><svg width="72" height="72" viewBox="0 0 72 72"><circle cx="36" cy="36" r="30" fill="none" stroke="#dfeaf6" stroke-width="8"/><circle id="waterArc" cx="36" cy="36" r="30" fill="none" stroke="#5aa9c9" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 999"/></svg><div class="lbl" id="waterPct">0%</div></div>
-            <div style="flex:1;"><div class="k">已喝</div><div class="v" id="waterNow">0 <span style="font-size:13px;color:var(--soft);">ml</span></div><div class="k" style="margin-top:6px;">目标</div><div class="v" id="waterGoal" style="font-size:13px;color:var(--ink);">2000 ml</div></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid2">
-        <div class="card">
-          <h3>身体趋势 <button class="link" onclick="go('weight')">查看</button></h3>
-          <div class="k">当前体重</div><div class="v big" id="tdNow">– kg</div>
-          <div class="row" style="margin-top:8px;">
-            <div class="mini-stat"><div class="k">7 日均值</div><div class="v" id="tdAvg7">– kg</div></div>
-            <div class="mini-stat"><div class="k">距目标</div><div class="v" id="tdToGo">– kg</div></div>
-          </div>
-        </div>
-        <div class="card">
-          <h3>今日活动 <button class="link" onclick="go('exercise')">记录</button></h3>
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div class="ring" id="actRing"><svg width="72" height="72" viewBox="0 0 72 72"><circle cx="36" cy="36" r="30" fill="none" stroke="#e3f1d9" stroke-width="8"/><circle id="actArc" cx="36" cy="36" r="30" fill="none" stroke="#6fae4e" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 999"/></svg><div class="lbl" id="actPct">0%</div></div>
-            <div style="flex:1;"><div class="k">运动消耗</div><div class="v" id="actKcal">0 <span style="font-size:13px;color:var(--soft);">kcal</span></div><div class="k" style="margin-top:6px;">训练</div><div id="actStatus" style="font-size:13px;color:var(--ink);">未安排</div></div>
-          </div>
-        </div>
-      </div>
-
       </div>
     </section>
 
@@ -1210,36 +1173,8 @@ function renderToday(){
     document.getElementById('heroEta').textContent=eta>0?eta:(eta===0?'今天':'已过');
   }
   else{document.getElementById('heroEta').textContent='未设';}
-  // 能量
-  const td=today();const kcal=dayKcal(td);const targetK=s.kcal||1700;
-  document.getElementById('enIn').innerHTML=`${kcal} <span style="font-size:14px;color:var(--soft);">kcal</span>`;
-  document.getElementById('enLeft').innerHTML=`${Math.max(0,targetK-kcal)} <span style="font-size:14px;color:var(--soft);">kcal</span>`;
-  const m=dayMacros(td);const tp=s.p||110,tc=s.c||191,tf=s.f||55;
-  document.getElementById('enPB').style.width=Math.min(100,m.p/tp*100)+'%';document.getElementById('enPV').textContent=`${m.p}/${tp}g`;
-  document.getElementById('enCB').style.width=Math.min(100,m.c/tc*100)+'%';document.getElementById('enCV').textContent=`${m.c}/${tc}g`;
-  document.getElementById('enFB').style.width=Math.min(100,m.f/tf*100)+'%';document.getElementById('enFV').textContent=`${m.f}/${tf}g`;
-  // 身体趋势（无体重记录时，用设置里的起始体重兜底，让卡片立即有数）
-  const w=ws.slice().sort((a,b)=>a.date<b.date?-1:1);const last=w[w.length-1];
-  const curW=last?last.weight:(s.startW||null);
-  document.getElementById('tdNow').textContent=(curW!=null?curW:'–')+' kg';
-  const last7=w.slice(-7);const avg7=last7.length?(last7.reduce((a,b)=>a+b.weight,0)/last7.length).toFixed(1):'–';
-  document.getElementById('tdAvg7').textContent=avg7+' kg';
-  const tg=s.targetW;
-  if(curW!=null&&tg!=null)document.getElementById('tdToGo').textContent=(curW-tg>0?(curW-tg).toFixed(1):(tg-curW).toFixed(1))+' kg';
-  else document.getElementById('tdToGo').textContent='– kg';
-  // 活动
-  const exs=DB.load('exercise').filter(x=>x.date===td);const ekcal=exs.reduce((a,b)=>a+(b.kcal||0),0);
-  document.getElementById('actKcal').innerHTML=`${ekcal} <span style="font-size:13px;color:var(--soft);">kcal</span>`;
-  const pct=Math.min(100,Math.round(ekcal/300*100));
-  document.getElementById('actPct').textContent=pct+'%';
-  const circ=2*Math.PI*30;const arc=document.getElementById('actArc');
-  arc.setAttribute('stroke-dasharray',`${circ*pct/100} 999`);
-  const status=exs.length?`${exs.length} 项训练`:'未安排';
-  document.getElementById('actStatus').textContent=status;
   // 待办
   renderTodo();
-  // 今日饮水
-  renderWaterCard();
 }
 
 /* 待办 */
@@ -2555,7 +2490,7 @@ function initNav(){if(window.innerWidth<900)document.body.classList.remove('nav-
 window.addEventListener('resize',()=>{if(window.innerWidth>=900)document.body.classList.add('nav-open');else document.body.classList.remove('nav-open');});
 
 /* ============ PWA ============ */
-const KSPACE_VERSION='kspace-v36';
+const KSPACE_VERSION='kspace-v37';
 if('serviceWorker' in navigator){
   let reloadPending=false;
   let _lastReload=0;
